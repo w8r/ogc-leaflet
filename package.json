@@ -1,0 +1,46 @@
+{
+  "name": "ogc-leaflet",
+  "version": "0.0.1",
+  "description": "general-purpose Leaflet adapter for OGC services, inspired by esri-leaflet",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "./node_modules/.bin/gulp"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/w8r/ogc-leaflet.git"
+  },
+  "keywords": [
+    "leaflet",
+    "map",
+    "ogc",
+    "wms",
+    "wfs"
+  ],
+  "author": "Alexander Milevski <info@w8r.name>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/w8r/ogc-leaflet/issues"
+  },
+  "browserify": {
+    "transform": ["babelify"]
+  },
+  "homepage": "https://github.com/w8r/ogc-leaflet#readme",
+  "devDependencies": {
+    "babelify": "^6.3.0",
+    "browserify": "^11.2.0",
+    "gulp": "^3.9.0",
+    "gulp-sourcemaps": "^1.6.0",
+    "serve": "^1.4.0",
+    "tap-spec": "^4.1.0",
+    "tape": "^4.2.1",
+    "uglify-js": "^2.4.24",
+    "vinyl-buffer": "^1.0.0",
+    "vinyl-source-stream": "^1.1.0",
+    "watchify": "^3.4.0"
+  },
+  "dependencies": {
+    "leaflet": "^0.7.5"
+  }
+}
