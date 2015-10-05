@@ -5,6 +5,8 @@ var buffer = require('vinyl-buffer');
 var browserify = require('browserify');
 var watchify = require('watchify');
 var babel = require('babelify');
+var serve = require('gulp-serve');
+var gutil = require("gulp-util");
 
 function compile(watch) {
   var bundler = watchify(browserify('./index.js', {
@@ -18,7 +20,10 @@ function compile(watch) {
   function rebundle() {
     bundler.bundle()
       .on('error', function(err) {
-        console.error(err);
+        gutil.log(
+          gutil.colors.red('Watchify:'),
+          gutil.colors.white(err)
+        );
         this.emit('end');
       })
       .pipe(source('ogc-leaflet-src.js'))
@@ -31,10 +36,16 @@ function compile(watch) {
   }
 
   if (watch) {
-    bundler.on('update', function() {
-      console.log('-> bundling...', arguments);
-      rebundle();
-    });
+    bundler
+      .on('update', function() {
+        rebundle();
+      })
+      .on('log', function(msg) {
+        gutil.log(
+          gutil.colors.green('Watchify:'),
+          gutil.colors.white(msg)
+        );
+      });
   }
 
   rebundle();
@@ -43,7 +54,6 @@ function compile(watch) {
 function watch() {
   return compile(true);
 }
-;
 
 gulp.task('build', function() {
   return compile();
@@ -53,4 +63,9 @@ gulp.task('watch', function() {
   return watch();
 });
 
-gulp.task('default', ['watch']);
+gulp.task('serve', serve({
+  root: ['.'],
+  port: 3000
+}));
+
+gulp.task('default', ['watch', 'serve']);
