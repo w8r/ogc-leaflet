@@ -12,7 +12,8 @@ export class Task {
       useCors: cors
     };
 
-    // endpoint can be either a url (and options) for an ArcGIS Rest Service or an instance of EsriLeaflet.Service
+    // endpoint can be either a url (and options) for an
+    // OGC Service or an instance of OgcLeaflet.Service
     if (endpoint.request && endpoint.options) {
       this._service = endpoint;
       L.Util.setOptions(this, endpoint.options);
@@ -24,7 +25,8 @@ export class Task {
     // clone default params into this object
     this.params = L.Util.extend({}, this.params || {});
 
-    // generate setter methods based on the setters object implimented a child class
+    // generate setter methods based on the setters object
+    // implimented a child class
     if (this.setters) {
       for (var setter in this.setters) {
         var param = this.setters[setter];
@@ -39,7 +41,7 @@ export class Task {
       this.params[param] = value;
       return this;
     }, context);
-  };
+  }
 
   token(token) {
     if (this._service) {
@@ -50,16 +52,22 @@ export class Task {
     return this;
   }
 
+  on(map) {
+    this._map = map;
+    return this;
+  }
+
   request(callback, context) {
     if (this._service) {
       return this._service.request(this.path, this.params, callback, context);
     }
-
     return this._request('request', this.path, this.params, callback, context);
   }
 
   _request(method, path, params, callback, context) {
-    var url = (this.options.proxy) ? this.options.proxy + '?' + this.options.url + path : this.options.url + path;
+    var url = (this.options.proxy) ?
+      this.options.proxy + '?' + this.options.url + path :
+      this.options.url + path;
 
     if ((method === 'get' || method === 'request') && !this.options.useCors) {
       return Request.get.JSONP(url, params, callback, context);

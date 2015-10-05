@@ -20,7 +20,8 @@ function serialize(params) {
       }
 
       if (type === '[object Array]') {
-        value = (Object.prototype.toString.call(param[0]) === '[object Object]') ? JSON.stringify(param) : param.join(',');
+        value = (Object.prototype.toString.call(param[0]) === '[object Object]') ?
+          JSON.stringify(param) : param.join(',');
       } else if (type === '[object Object]') {
         value = JSON.stringify(param);
       } else if (type === '[object Date]') {

@@ -8,8 +8,12 @@ var babel = require('babelify');
 
 function compile(watch) {
   var bundler = watchify(browserify('./index.js', {
-    debug: true
-  }).transform(babel));
+    debug: true,
+  })
+  .exclude('leaflet')
+  .transform(babel.configure({
+    optional: ['runtime']
+  })));
 
   function rebundle() {
     bundler.bundle()
@@ -22,13 +26,13 @@ function compile(watch) {
       .pipe(sourcemaps.init({
         loadMaps: true
       }))
-      .pipe(sourcemaps.write('./dist'))
+      .pipe(sourcemaps.write('.'))
       .pipe(gulp.dest('./dist'));
   }
 
   if (watch) {
     bundler.on('update', function() {
-      console.log('-> bundling...');
+      console.log('-> bundling...', arguments);
       rebundle();
     });
   }

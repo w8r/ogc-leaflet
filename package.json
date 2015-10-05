@@ -24,10 +24,13 @@
     "url": "https://github.com/w8r/ogc-leaflet/issues"
   },
   "browserify": {
-    "transform": ["babelify"]
+    "transform": [
+      "babelify"
+    ]
   },
   "homepage": "https://github.com/w8r/ogc-leaflet#readme",
   "devDependencies": {
+    "babel-runtime": "^5.8.25",
     "babelify": "^6.3.0",
     "browserify": "^11.2.0",
     "gulp": "^3.9.0",

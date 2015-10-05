@@ -59,7 +59,9 @@ export class Service {
       this._requestQueue.push([method, path, params, callback, context]);
       return;
     } else {
-      var url = (this.options.proxy) ? this.options.proxy + '?' + this.options.url + path : this.options.url + path;
+      var url = this.options.proxy ?
+        this.options.proxy + '?' + this.options.url + path :
+        this.options.url + path;
 
       if ((method === 'get' || method === 'request') && !this.options.useCors) {
         return Request.get.JSONP(url, params, wrappedCallback);

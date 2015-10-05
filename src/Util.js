@@ -53,9 +53,24 @@ export function cleanUrl(url) {
   return url;
 }
 
+/**
+ * @param  {L.LatLngBounds|L.Bounds} bounds
+ * @return {Array.<Number>}
+ */
+export function boundsToBBox(bounds) {
+    return bounds._min && bounds._max ? [
+      bounds._min.x, bounds._min.y,
+      bounds._max.x, bounds._max.y
+    ] : [
+      bounds._southWest.lng, bounds._northEast.lat,
+      bounds._northEast.lng, bounds._southWest.lat,
+    ];
+}
+
 export var Util = {
   shallowClone: shallowClone,
-  cleanUrl: cleanUrl
+  cleanUrl: cleanUrl,
+  'boundsToBBox': boundsToBBox
 };
 
 export default Util;

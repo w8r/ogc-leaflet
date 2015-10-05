@@ -15,7 +15,8 @@ import { Task, task } from './Tasks/Task';
 
 // import services
 import { Service, service } from './Services/Service';
-//import { MapService, mapService } from './Services/MapService';
+import { WFS, wfs } from './Services/WFS';
+import { WMS, wms } from './Services/WMS';
 //import { ImageService, imageService } from './Services/ImageService';
 //import { FeatureLayerService, featureLayerService } from './Services/FeatureLayerService';
 
@@ -30,14 +31,12 @@ import { Service, service } from './Services/Service';
 //import { FeatureLayer, featureLayer } from './Layers/FeatureLayer/FeatureLayer';
 
 L.ogc = {
-  Service,
-  service,
-  Task,
-  task,
+  Service, service,
+  WFS, wfs,
+  WMS, wms,
+  Task, task,
   Util,
-  get,
-  post,
-  request,
+  get, post, request,
   Support
 }
 
