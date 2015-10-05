@@ -18,7 +18,8 @@ export default class GetFeature extends Task {
      */
     L.Util.extend(this.params, {
       srsName: 'EPSG:4326',
-      request: 'GetFeature'
+      request: 'GetFeature',
+      info_format: 'application/json'
     });
 
     if(this._service && this._service.options) {

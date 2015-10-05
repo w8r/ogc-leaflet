@@ -1,11 +1,16 @@
 import L from 'leaflet';
-import Task from './Task'
+import Task from './Task';
+import { boundsToBBox } from '../Util';
 
 /**
  * @class OgcLeaflet.Tasks.GetFeatureInfo
  * @extends {OgcLeaflet.Tasks.Task}
  */
 export default class GetFeatureInfo extends Task {
+
+  /**
+   * @param  {ObgLeaflet.Services.WMS|String} endpoint
+   */
   constructor (endpoint) {
     super(endpoint);
     L.Util.extend(this.params, {
@@ -16,25 +21,42 @@ export default class GetFeatureInfo extends Task {
     });
   }
 
+  /**
+   * @param  {L.LatLng} latlng
+   * @return {GetFeatureInfo}
+   */
   set at(latlng) {
-    let x = latlng.lng;
-    let y = latlng.lat;
-
-    if (this._map) { // project
-
+    let px;
+    if (latlng instanceof L.LatLng) {
+      if (this._map) { // project
+        px = this._map.lalLngToContainerPixel(latlng);
+      } else {
+        throw new Error('Cannot project latlng to map pixels');
+      }
+    } else {
+      px = latlng;
     }
 
-    this.params.x = latlng.lng;
-    this.params.y = latlng.lat;
+    this.params.x = px.x;
+    this.params.y = px.y;
+
     return this;
   }
 
+  /**
+   * @param  {Number} tolerance
+   * @return {GetFeatureInfo}
+   */
   set tolerance(tolerance = 0) {
     this.params.buffer = tolerance;
     return this;
   }
 
-  set layers (layers) {
+  /**
+   * @param  {Array.<String>|String} layers
+   * @return {GetFeatureInfo}
+   */
+  set layers (layers = []) {
     if (L.Util.isArray(layers)) {
       layers = layers.join(',');
     }
@@ -42,18 +64,30 @@ export default class GetFeatureInfo extends Task {
     return this;
   }
 
+  /**
+   * @param  {Number} limit
+   * @return {GetFeatureInfo}
+   */
   set limit (limit = 0) {
-    this.params.limit = limit;
+    this.params.feature_count = limit;
     return this;
   }
 
+  /**
+   * @param  {L.Point} size
+   * @return {GetFeatureInfo}
+   */
   size(size) {
     this.params.width = size.x;
     this.params.height = size.y;
     return this;
   }
 
-  set returnProperties(properties) {
+  /**
+   * @param  {Array.<String>|String} properties
+   * @return {GetFeatureInfo}
+   */
+  set returnProperties(properties = []) {
     this.params.propertyName =
       L.Util.isArray(properties) ? properties.join(',') : properties;
     return this;

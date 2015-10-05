@@ -1204,7 +1204,8 @@ var GetFeature = (function (_Task) {
      */
     _leaflet2['default'].Util.extend(this.params, {
       srsName: 'EPSG:4326',
-      request: 'GetFeature'
+      request: 'GetFeature',
+      info_format: 'application/json'
     });
 
     if (this._service && this._service.options) {
@@ -1376,6 +1377,8 @@ var _Task2 = require('./Task');
 
 var _Task3 = _interopRequireDefault(_Task2);
 
+var _Util = require('../Util');
+
 /**
  * @class OgcLeaflet.Tasks.GetFeatureInfo
  * @extends {OgcLeaflet.Tasks.Task}
@@ -1383,6 +1386,10 @@ var _Task3 = _interopRequireDefault(_Task2);
 
 var GetFeatureInfo = (function (_Task) {
   _inherits(GetFeatureInfo, _Task);
+
+  /**
+   * @param  {ObgLeaflet.Services.WMS|String} endpoint
+   */
 
   function GetFeatureInfo(endpoint) {
     _classCallCheck(this, GetFeatureInfo);
@@ -1396,27 +1403,53 @@ var GetFeatureInfo = (function (_Task) {
     });
   }
 
+  /**
+   * @param  {L.LatLng} latlng
+   * @return {GetFeatureInfo}
+   */
+
   _createClass(GetFeatureInfo, [{
     key: 'size',
+
+    /**
+     * @param  {L.Point} size
+     * @return {GetFeatureInfo}
+     */
     value: function size(_size) {
       this.params.width = _size.x;
       this.params.height = _size.y;
       return this;
     }
+
+    /**
+     * @param  {Array.<String>|String} properties
+     * @return {GetFeatureInfo}
+     */
   }, {
     key: 'at',
     set: function set(latlng) {
-      var x = latlng.lng;
-      var y = latlng.lat;
-
-      if (this._map) {// project
-
+      var px = undefined;
+      if (latlng instanceof _leaflet2['default'].LatLng) {
+        if (this._map) {
+          // project
+          px = this._map.lalLngToContainerPixel(latlng);
+        } else {
+          throw new Error('Cannot project latlng to map pixels');
+        }
+      } else {
+        px = latlng;
       }
 
-      this.params.x = latlng.lng;
-      this.params.y = latlng.lat;
+      this.params.x = px.x;
+      this.params.y = px.y;
+
       return this;
     }
+
+    /**
+     * @param  {Number} tolerance
+     * @return {GetFeatureInfo}
+     */
   }, {
     key: 'tolerance',
     set: function set() {
@@ -1425,26 +1458,40 @@ var GetFeatureInfo = (function (_Task) {
       this.params.buffer = tolerance;
       return this;
     }
+
+    /**
+     * @param  {Array.<String>|String} layers
+     * @return {GetFeatureInfo}
+     */
   }, {
     key: 'layers',
-    set: function set(layers) {
+    set: function set() {
+      var layers = arguments.length <= 0 || arguments[0] === undefined ? [] : arguments[0];
+
       if (_leaflet2['default'].Util.isArray(layers)) {
         layers = layers.join(',');
       }
       this.params.layers = layers;
       return this;
     }
+
+    /**
+     * @param  {Number} limit
+     * @return {GetFeatureInfo}
+     */
   }, {
     key: 'limit',
     set: function set() {
       var limit = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
 
-      this.params.limit = limit;
+      this.params.feature_count = limit;
       return this;
     }
   }, {
     key: 'returnProperties',
-    set: function set(properties) {
+    set: function set() {
+      var properties = arguments.length <= 0 || arguments[0] === undefined ? [] : arguments[0];
+
       this.params.propertyName = _leaflet2['default'].Util.isArray(properties) ? properties.join(',') : properties;
       return this;
     }
@@ -1456,7 +1503,7 @@ var GetFeatureInfo = (function (_Task) {
   }, {
     key: 'bounds',
     set: function set(bounds) {
-      return this.bbox(boundsToBBox(bounds));
+      return this.bbox((0, _Util.boundsToBBox)(bounds));
     }
 
     /**
@@ -1480,12 +1527,14 @@ function getFeatureInfo(endpoint) {
   return new GetFeatureInfo(endpoint);
 }
 
-},{"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"babel-runtime/helpers/interop-require-default":13,"leaflet":undefined}],48:[function(require,module,exports){
+},{"../Util":50,"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"babel-runtime/helpers/interop-require-default":13,"leaflet":undefined}],48:[function(require,module,exports){
 'use strict';
 
 var _get = require('babel-runtime/helpers/get')['default'];
 
 var _inherits = require('babel-runtime/helpers/inherits')['default'];
+
+var _createClass = require('babel-runtime/helpers/create-class')['default'];
 
 var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
 
@@ -1496,18 +1545,104 @@ Object.defineProperty(exports, '__esModule', {
 });
 exports.getLegendGraphic = getLegendGraphic;
 
+var _leaflet = require('leaflet');
+
+var _leaflet2 = _interopRequireDefault(_leaflet);
+
 var _Task2 = require('./Task');
 
 var _Task3 = _interopRequireDefault(_Task2);
 
+/**
+ * @class OgcLeaflet.Tasks.GetLegendGrapic
+ * @extends {OgcLeaflet.Tasks.Task}
+ */
+
 var GetLegendGraphic = (function (_Task) {
   _inherits(GetLegendGraphic, _Task);
+
+  /**
+   * @param  {OgcLeaflet.Services.Service|String} endpoint
+   */
 
   function GetLegendGraphic(endpoint) {
     _classCallCheck(this, GetLegendGraphic);
 
     _get(Object.getPrototypeOf(GetLegendGraphic.prototype), 'constructor', this).call(this, endpoint);
+
+    /**
+     * @type {Object}
+     */
+    this.defaultLegendStyles = {
+      fontAntiAliasing: true,
+      dpi: 72,
+      fontName: 'Helvetica',
+      bgColor: '#ffffff',
+      fontStyle: 'normal'
+    };
+
+    _leaflet2['default'].Util.extend(this.params, {
+      'request': 'GetLegendGraphic',
+      'format': 'image/png'
+    });
   }
+
+  /**
+   * @param  {String} format
+   * @return {GetLegendGraphic}
+   */
+
+  _createClass(GetLegendGraphic, [{
+    key: 'format',
+    set: function set(format) {
+      this.params.format = format;
+      return this;
+    }
+
+    /**
+     * @param  {String} layer
+     * @return {GetLegendGraphic}
+     */
+  }, {
+    key: 'layer',
+    set: function set(layer) {
+      this.params.layer = layer;
+      return this;
+    }
+
+    /**
+     * @static
+     * @param  {Object} options
+     * @return {String}
+     */
+  }, {
+    key: 'styles',
+
+    /**
+     * @param  {Object} styles
+     * @return {GetLegendGraphic}
+     */
+    set: function set() {
+      var styles = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+
+      this.params.legend_options = this._formatLegendOptions(_leaflet2['default'].Util.extend({}, this.defaultLegendStyles, styles));
+      return this;
+    }
+  }], [{
+    key: '_formatLegendOptions',
+    value: function _formatLegendOptions(options) {
+      var paramString = '';
+      var params = ['dpi', 'fontAntiAliasing', 'fontName', 'bgColor', 'fontSize', 'fontStyle'];
+
+      for (var i = 0, len = params.length; i < len; i++) {
+        var key = params[i];
+        if (options.hasOwnProperty(key)) {
+          paramString += key + ':' + pairs[key] + ';';
+        }
+      }
+      return paramString;
+    }
+  }]);
 
   return GetLegendGraphic;
 })(_Task3['default']);
@@ -1518,7 +1653,7 @@ function getLegendGraphic(endpoint) {
   return new GetLegendGraphic(endpoint);
 }
 
-},{"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"babel-runtime/helpers/interop-require-default":13}],49:[function(require,module,exports){
+},{"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"babel-runtime/helpers/interop-require-default":13,"leaflet":undefined}],49:[function(require,module,exports){
 'use strict';
 
 var _createClass = require('babel-runtime/helpers/create-class')['default'];
