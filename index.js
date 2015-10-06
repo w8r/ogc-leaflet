@@ -1,1 +1,1 @@
-export * from './src/OGCLeaflet';
+export * from './src/ogc';
