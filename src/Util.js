@@ -1,4 +1,4 @@
-import L from 'leaflet';
+const L  = global.L || require('leaflet');
 
 // checks if 2 x,y points are equal
 function pointsEqual(a, b) {

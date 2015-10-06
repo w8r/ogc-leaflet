@@ -1,18 +1,19 @@
-import L from 'leaflet';
-import Task from './Task';
+const L  = global.L || require('leaflet');
+import { Task } from './Task';
 import { boundsToBBox } from '../Util';
 
 /**
- * @class OgcLeaflet.Tasks.GetFeatureInfo
- * @extends {OgcLeaflet.Tasks.Task}
+ * @class ogc.Tasks.GetFeatureInfo
+ * @extends {ogc.Tasks.Task}
  */
-export default class GetFeatureInfo extends Task {
+export class GetFeatureInfo extends Task {
 
   /**
    * @param  {ObgLeaflet.Services.WMS|String} endpoint
    */
   constructor (endpoint) {
     super(endpoint);
+
     L.Util.extend(this.params, {
       request: 'GetFeatureInfo',
       exceptions: 'application/json',
@@ -25,7 +26,7 @@ export default class GetFeatureInfo extends Task {
    * @param  {L.LatLng} latlng
    * @return {GetFeatureInfo}
    */
-  set at(latlng) {
+  at(latlng) {
     let px;
     if (latlng instanceof L.LatLng) {
       if (this._map) { // project
@@ -47,7 +48,7 @@ export default class GetFeatureInfo extends Task {
    * @param  {Number} tolerance
    * @return {GetFeatureInfo}
    */
-  set tolerance(tolerance = 0) {
+  tolerance(tolerance = 0) {
     this.params.buffer = tolerance;
     return this;
   }
@@ -56,7 +57,7 @@ export default class GetFeatureInfo extends Task {
    * @param  {Array.<String>|String} layers
    * @return {GetFeatureInfo}
    */
-  set layers (layers = []) {
+  layers (layers = []) {
     if (L.Util.isArray(layers)) {
       layers = layers.join(',');
     }
@@ -68,7 +69,7 @@ export default class GetFeatureInfo extends Task {
    * @param  {Number} limit
    * @return {GetFeatureInfo}
    */
-  set limit (limit = 0) {
+  limit (limit = 0) {
     this.params.feature_count = limit;
     return this;
   }
@@ -87,7 +88,7 @@ export default class GetFeatureInfo extends Task {
    * @param  {Array.<String>|String} properties
    * @return {GetFeatureInfo}
    */
-  set returnProperties(properties = []) {
+  returnProperties(properties = []) {
     this.params.propertyName =
       L.Util.isArray(properties) ? properties.join(',') : properties;
     return this;
@@ -97,7 +98,7 @@ export default class GetFeatureInfo extends Task {
    * @param  {L.LatLngBounds|L.Bounds} bounds
    * @return {GetFeatureInfo}
    */
-  set bounds (bounds) {
+  bounds (bounds) {
     return this.bbox(boundsToBBox(bounds));
   }
 
@@ -105,7 +106,7 @@ export default class GetFeatureInfo extends Task {
    * @param  {Array.<Number>} bbox
    * @return {GetFeatureInfo}
    */
-  set bbox (bbox) {
+  bbox (bbox) {
     this.params.bbox = bbox.join(',');
     return this;
   }

@@ -1,11 +1,11 @@
-import L from 'leaflet';
-import Task from './Task'
+const L  = global.L || require('leaflet');
+import { Task } from './Task'
 
 /**
  * @class OgcLeaflet.Tasks.DescribeFeatureType
  * @extends {OgcLeaflet.Tasks.Task}
  */
-export default class DescribeFeatureType extends Task {
+export class DescribeFeatureType extends Task {
 
   /**
    * @param  {Object|String} endpoint
@@ -22,7 +22,7 @@ export default class DescribeFeatureType extends Task {
    * @param  {Array.<String>|String}  layers
    * @return {DescribeFeatureType}
    */
-  set layers (layers = []) {
+  layers (layers = []) {
     if (L.Util.isArray(layers)) {
       layers = layers.join(',');
     }

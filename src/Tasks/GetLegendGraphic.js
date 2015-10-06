@@ -1,14 +1,14 @@
-import L from 'leaflet';
-import Task from './Task'
+const L  = global.L || require('leaflet');
+import { Task } from './Task'
 
 /**
- * @class OgcLeaflet.Tasks.GetLegendGrapic
- * @extends {OgcLeaflet.Tasks.Task}
+ * @class ogc.Tasks.GetLegendGrapic
+ * @extends {ogc.Tasks.Task}
  */
-export default class GetLegendGraphic extends Task {
+export class GetLegendGraphic extends Task {
 
   /**
-   * @param  {OgcLeaflet.Services.Service|String} endpoint
+   * @param  {ogc.Services.Service|String} endpoint
    */
   constructor (endpoint) {
     super(endpoint);
@@ -34,7 +34,7 @@ export default class GetLegendGraphic extends Task {
    * @param  {String} format
    * @return {GetLegendGraphic}
    */
-  set format(format) {
+  format(format) {
     this.params.format = format;
     return this;
   }
@@ -43,7 +43,7 @@ export default class GetLegendGraphic extends Task {
    * @param  {String} layer
    * @return {GetLegendGraphic}
    */
-  set layer(layer) {
+  layer(layer) {
     this.params.layer = layer;
     return this;
   }
@@ -74,7 +74,7 @@ export default class GetLegendGraphic extends Task {
    * @param  {Object} styles
    * @return {GetLegendGraphic}
    */
-  set styles(styles = {}) {
+  styles(styles = {}) {
     this.params.legend_options = this._formatLegendOptions(
       L.Util.extend({}, this.defaultLegendStyles, styles)
     );

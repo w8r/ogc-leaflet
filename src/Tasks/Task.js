@@ -1,10 +1,16 @@
-import L from 'leaflet';
+const L  = global.L || require('leaflet');
 import { cors } from '../Support';
 import { cleanUrl } from '../Util';
 import Request from '../Request';
 
+/**
+ * @class ogc.Tasks.Task
+ */
 export class Task {
 
+  /**
+   * @param  {ogc.Services.Service|String} endpoint
+   */
   constructor(endpoint) {
 
     this.options = {

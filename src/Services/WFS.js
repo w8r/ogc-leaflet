@@ -1,15 +1,37 @@
-import L from 'leaflet';
-import Service from './Service';
-import getFeature from '../Tasks/GetFeature';
-import getCapabilities from '../Tasks/GetCapabilities';
-import describeFeatureType from '../Tasks/DescribeFeatureType';
+const L  = global.L || require('leaflet');
+import { Service } from './Service';
+import { getFeature } from '../Tasks/GetFeature';
+import { getCapabilities } from '../Tasks/GetCapabilities';
+import { describeFeatureType } from '../Tasks/DescribeFeatureType';
 
-export default class WFS extends Service {
+/**
+ * @class ogc.Services.WFS
+ * @extends {ogc.Services.Service}
+ */
+export class WFSService extends Service {
+
+  /**
+   * @param  {Object} options
+   */
   constructor(options) {
     super(options);
   }
+
+  /**
+   * @return {ogc.Tasks.GetFeature}
+   */
+  getFeature() {
+    return getFeature(this);
+  }
+
+  /**
+   * @return {ogc.Tasks.DescribeFeatureType}
+   */
+  describeFeatureType() {
+    return describeFeatureType(this);
+  }
 }
 
-export function wfs(options) {
-  return new WFS(options);
+export function wfsService(options) {
+  return new WFSService(options);
 }

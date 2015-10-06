@@ -1,4 +1,4 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.ogc = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 'use strict';
 
 var _defaults = require('babel-runtime/helpers/defaults')['default'];
@@ -13,7 +13,7 @@ var _srcOGCLeaflet = require('./src/OGCLeaflet');
 
 _defaults(exports, _interopExportWildcard(_srcOGCLeaflet, _defaults));
 
-},{"./src/OGCLeaflet":38,"babel-runtime/helpers/defaults":9,"babel-runtime/helpers/interop-export-wildcard":12}],2:[function(require,module,exports){
+},{"./src/OGCLeaflet":39,"babel-runtime/helpers/defaults":9,"babel-runtime/helpers/interop-export-wildcard":12}],2:[function(require,module,exports){
 module.exports = { "default": require("core-js/library/fn/object/create"), __esModule: true };
 },{"core-js/library/fn/object/create":14}],3:[function(require,module,exports){
 module.exports = { "default": require("core-js/library/fn/object/define-property"), __esModule: true };
@@ -414,17 +414,56 @@ require('./$.object-sap')('getOwnPropertyNames', function(){
 var $def = require('./$.def');
 $def($def.S, 'Object', {setPrototypeOf: require('./$.set-proto').set});
 },{"./$.def":24,"./$.set-proto":33}],38:[function(require,module,exports){
+(function (global){
 'use strict';
 
-var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
+var _get = require('babel-runtime/helpers/get')['default'];
+
+var _inherits = require('babel-runtime/helpers/inherits')['default'];
+
+var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
 
 Object.defineProperty(exports, '__esModule', {
   value: true
 });
+exports.wms = wms;
 
-var _leaflet = require('leaflet');
+var _ServicesWMS = require('../Services/WMS');
 
-var _leaflet2 = _interopRequireDefault(_leaflet);
+var L = global.L || require('leaflet');
+
+var WMS = (function (_L$TileLayer$WMS) {
+  _inherits(WMS, _L$TileLayer$WMS);
+
+  function WMS(url) {
+    var options = arguments.length <= 1 || arguments[1] === undefined ? L.TileLayer.WMS.prototype.options : arguments[1];
+
+    _classCallCheck(this, WMS);
+
+    _get(Object.getPrototypeOf(WMS.prototype), 'constructor', this).call(this, url, options);
+
+    options.url = url;
+    this.service = (0, _ServicesWMS.wmsService)(options);
+  }
+
+  return WMS;
+})(L.TileLayer.WMS);
+
+exports.WMS = WMS;
+
+function wms(url, options) {
+  return new WMS(url, options);
+}
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{"../Services/WMS":43,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],39:[function(require,module,exports){
+(function (global){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
 
 // import base
 
@@ -438,7 +477,12 @@ var _Request = require('./Request');
 
 var _TasksTask = require('./Tasks/Task');
 
-//import { Query, query } from './Tasks/Query';
+var _TasksGetFeature = require('./Tasks/GetFeature');
+
+var _TasksDescribeFeatureType = require('./Tasks/DescribeFeatureType');
+
+var _TasksGetLegendGraphic = require('./Tasks/GetLegendGraphic');
+
 //import { Find, find } from './Tasks/Find';
 //import { Identify, identify } from './Tasks/Identify';
 //import { IdentifyFeatures, identifyFeatures } from './Tasks/IdentifyFeatures';
@@ -456,7 +500,9 @@ var _ServicesWMS = require('./Services/WMS');
 //import { FeatureLayerService, featureLayerService } from './Services/FeatureLayerService';
 
 // import layers
-//import { BasemapLayer, basemapLayer } from './Layers/BasemapLayer';
+
+var _LayersWMS = require('./Layers/WMS');
+
 //import { TiledMapLayer, tiledMapLayer } from './Layers/TiledMapLayer';
 //import { RasterLayer } from './Layers/RasterLayer';
 //import { ImageMapLayer, imageMapLayer } from './Layers/ImageMapLayer';
@@ -465,20 +511,34 @@ var _ServicesWMS = require('./Services/WMS');
 //import { FeatureManager } from './Layers/FeatureLayer/FeatureManager';
 //import { FeatureLayer, featureLayer } from './Layers/FeatureLayer/FeatureLayer';
 
-_leaflet2['default'].ogc = {
+var L = global.L || require('leaflet');L.ogc = {
   Service: _ServicesService.Service, service: _ServicesService.service,
-  WFS: _ServicesWFS.WFS, wfs: _ServicesWFS.wfs,
-  WMS: _ServicesWMS.WMS, wms: _ServicesWMS.wms,
+  WFSService: _ServicesWFS.WFSService, wfsService: _ServicesWFS.wfsService,
+  WMSService: _ServicesWMS.WMSService, wmsService: _ServicesWMS.wmsService,
   Task: _TasksTask.Task, task: _TasksTask.task,
   Util: _Util.Util,
   get: _Request.get, post: _Request.post, request: _Request.request,
-  Support: _Support.Support
+  Support: _Support.Support,
+
+  GetCapabilities: _TasksGetFeature.GetCapabilities, getCapabilities: _TasksGetFeature.getCapabilities,
+  GetLegendGraphic: _TasksGetLegendGraphic.GetLegendGraphic, getLegendGraphic: _TasksGetLegendGraphic.getLegendGraphic,
+  GetFeatureInfo: _TasksGetFeature.GetFeatureInfo, getFeatureInfo: _TasksGetFeature.getFeatureInfo,
+  GetFeature: _TasksGetFeature.GetFeature, getFeature: _TasksGetFeature.getFeature,
+  DescribeFeatureType: _TasksDescribeFeatureType.DescribeFeatureType, describeFeatureType: _TasksDescribeFeatureType.describeFeatureType,
+
+  WMS: _LayersWMS.WMS, wms: _LayersWMS.wms,
+
+  // aliases
+  DynamicMapLayer: _LayersWMS.WMS
 };
 
-exports['default'] = _leaflet2['default'].ogc;
+exports['default'] = L.ogc;
 module.exports = exports['default'];
 
-},{"./Request":39,"./Services/Service":40,"./Services/WFS":41,"./Services/WMS":42,"./Support":43,"./Tasks/Task":49,"./Util":50,"babel-runtime/helpers/interop-require-default":13,"leaflet":undefined}],39:[function(require,module,exports){
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{"./Layers/WMS":38,"./Request":40,"./Services/Service":41,"./Services/WFS":42,"./Services/WMS":43,"./Support":44,"./Tasks/DescribeFeatureType":45,"./Tasks/GetFeature":47,"./Tasks/GetLegendGraphic":49,"./Tasks/Task":50,"./Util":51,"leaflet":"leaflet"}],40:[function(require,module,exports){
+(function (global){
 'use strict';
 
 var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
@@ -489,15 +549,13 @@ Object.defineProperty(exports, '__esModule', {
 exports.request = request;
 exports.jsonp = jsonp;
 
-var _leaflet = require('leaflet');
-
-var _leaflet2 = _interopRequireDefault(_leaflet);
-
 var _Support = require('./Support');
 
 var _Support2 = _interopRequireDefault(_Support);
 
 var _Util = require('./Util');
+
+var L = global.L || require('leaflet');
 
 var callbacks = 0;
 
@@ -537,7 +595,7 @@ function createRequest(callback, context) {
   var httpRequest = new window.XMLHttpRequest();
 
   httpRequest.onerror = function (e) {
-    httpRequest.onreadystatechange = _leaflet2['default'].Util.falseFn;
+    httpRequest.onreadystatechange = L.Util.falseFn;
 
     callback.call(context, {
       error: {
@@ -567,7 +625,7 @@ function createRequest(callback, context) {
         response = null;
       }
 
-      httpRequest.onerror = _leaflet2['default'].Util.falseFn;
+      httpRequest.onerror = L.Util.falseFn;
 
       callback.call(context, error, response);
     }
@@ -631,7 +689,7 @@ function jsonp(url, params, callback, context) {
 
   params.callback = 'window._EsriLeafletCallbacks.' + callbackId;
 
-  var script = _leaflet2['default'].DomUtil.create('script', null, document.body);
+  var script = L.DomUtil.create('script', null, document.body);
   script.type = 'text/javascript';
   script.src = url + '?' + serialize(params);
   script.id = callbackId;
@@ -680,12 +738,21 @@ get.CORS = xmlHttpGet;
 get.JSONP = jsonp;
 
 // choose the correct AJAX handler depending on CORS support
-exports.get = get;
+// export the Request object to call the different handlers for debugging
+var Request = {
+  request: request,
+  get: get,
+  post: xmlHttpPost
+};
 
+exports.Request = Request;
 // always use XMLHttpRequest for posts
 exports.post = xmlHttpPost;
 
-},{"./Support":43,"./Util":50,"babel-runtime/helpers/interop-require-default":13,"leaflet":undefined}],40:[function(require,module,exports){
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{"./Support":44,"./Util":51,"babel-runtime/helpers/interop-require-default":13,"leaflet":"leaflet"}],41:[function(require,module,exports){
+(function (global){
 'use strict';
 
 var _createClass = require('babel-runtime/helpers/create-class')['default'];
@@ -698,16 +765,10 @@ var _Object$defineProperty = require('babel-runtime/core-js/object/define-proper
 
 var _Object$getOwnPropertyDescriptor = require('babel-runtime/core-js/object/get-own-property-descriptor')['default'];
 
-var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
-
 Object.defineProperty(exports, '__esModule', {
   value: true
 });
 exports.service = service;
-
-var _leaflet = require('leaflet');
-
-var _leaflet2 = _interopRequireDefault(_leaflet);
 
 var _Support = require('../Support');
 
@@ -715,7 +776,7 @@ var _Util = require('../Util');
 
 var _Request = require('../Request');
 
-var _Request2 = _interopRequireDefault(_Request);
+var L = global.L || require('leaflet');
 
 var Service = (function () {
   function Service() {
@@ -731,7 +792,7 @@ var Service = (function () {
     options = options || {};
     this._requestQueue = [];
     this._authenticating = false;
-    _leaflet2['default'].Util.setOptions(this, options);
+    L.Util.setOptions(this, options);
     this.options.url = (0, _Util.cleanUrl)(this.options.url);
   }
 
@@ -785,16 +846,16 @@ var Service = (function () {
         var url = this.options.proxy ? this.options.proxy + '?' + this.options.url + path : this.options.url + path;
 
         if ((method === 'get' || method === 'request') && !this.options.useCors) {
-          return _Request2['default'].get.JSONP(url, params, wrappedCallback);
+          return _Request.Request.get.JSONP(url, params, wrappedCallback);
         } else {
-          return _Request2['default'][method](url, params, wrappedCallback);
+          return _Request.Request[method](url, params, wrappedCallback);
         }
       }
     }
   }, {
     key: '_createServiceCallback',
     value: function _createServiceCallback(method, path, params, callback, context) {
-      return _leaflet2['default'].Util.bind(function (error, response) {
+      return L.Util.bind(function (error, response) {
         if (error && (error.code === 499 || error.code === 498)) {
           this._authenticating = true;
 
@@ -802,11 +863,11 @@ var Service = (function () {
 
           // fire an event for users to handle and re-authenticate
           this.fire('authenticationrequired', {
-            authenticate: _leaflet2['default'].Util.bind(this.authenticate, this)
+            authenticate: L.Util.bind(this.authenticate, this)
           }, true);
 
           // if the user has access to a callback they can handle the auth error
-          error.authenticate = _leaflet2['default'].Util.bind(this.authenticate, this);
+          error.authenticate = L.Util.bind(this.authenticate, this);
         }
 
         callback.call(context, error, response);
@@ -852,8 +913,10 @@ var Service = (function () {
 
 exports.Service = Service;
 
-_Object$getOwnPropertyNames(_leaflet2['default'].Mixin.Events).forEach(function (name) {
-  if (name !== "constructor") _Object$defineProperty(Service, name, _Object$getOwnPropertyDescriptor(_leaflet2['default'].Mixin.Events, name));
+_Object$getOwnPropertyNames(L.Mixin.Events).forEach(function (name) {
+  if (name !== "constructor") {
+    _Object$defineProperty(Service.prototype, name, _Object$getOwnPropertyDescriptor(L.Mixin.Events, name));
+  }
 });
 
 function service(options) {
@@ -862,61 +925,10 @@ function service(options) {
 
 exports['default'] = service;
 
-},{"../Request":39,"../Support":43,"../Util":50,"babel-runtime/core-js/object/define-property":3,"babel-runtime/core-js/object/get-own-property-descriptor":4,"babel-runtime/core-js/object/get-own-property-names":5,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/interop-require-default":13,"leaflet":undefined}],41:[function(require,module,exports){
-'use strict';
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-var _get = require('babel-runtime/helpers/get')['default'];
-
-var _inherits = require('babel-runtime/helpers/inherits')['default'];
-
-var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
-
-var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
-
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-exports.wfs = wfs;
-
-var _leaflet = require('leaflet');
-
-var _leaflet2 = _interopRequireDefault(_leaflet);
-
-var _Service2 = require('./Service');
-
-var _Service3 = _interopRequireDefault(_Service2);
-
-var _TasksGetFeature = require('../Tasks/GetFeature');
-
-var _TasksGetFeature2 = _interopRequireDefault(_TasksGetFeature);
-
-var _TasksGetCapabilities = require('../Tasks/GetCapabilities');
-
-var _TasksGetCapabilities2 = _interopRequireDefault(_TasksGetCapabilities);
-
-var _TasksDescribeFeatureType = require('../Tasks/DescribeFeatureType');
-
-var _TasksDescribeFeatureType2 = _interopRequireDefault(_TasksDescribeFeatureType);
-
-var WFS = (function (_Service) {
-  _inherits(WFS, _Service);
-
-  function WFS(options) {
-    _classCallCheck(this, WFS);
-
-    _get(Object.getPrototypeOf(WFS.prototype), 'constructor', this).call(this, options);
-  }
-
-  return WFS;
-})(_Service3['default']);
-
-exports['default'] = WFS;
-
-function wfs(options) {
-  return new WFS(options);
-}
-
-},{"../Tasks/DescribeFeatureType":44,"../Tasks/GetCapabilities":45,"../Tasks/GetFeature":46,"./Service":40,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"babel-runtime/helpers/interop-require-default":13,"leaflet":undefined}],42:[function(require,module,exports){
+},{"../Request":40,"../Support":44,"../Util":51,"babel-runtime/core-js/object/define-property":3,"babel-runtime/core-js/object/get-own-property-descriptor":4,"babel-runtime/core-js/object/get-own-property-names":5,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"leaflet":"leaflet"}],42:[function(require,module,exports){
+(function (global){
 'use strict';
 
 var _get = require('babel-runtime/helpers/get')['default'];
@@ -927,69 +939,168 @@ var _createClass = require('babel-runtime/helpers/create-class')['default'];
 
 var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
 
-var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+exports.wfsService = wfsService;
+
+var _Service2 = require('./Service');
+
+var _TasksGetFeature = require('../Tasks/GetFeature');
+
+var _TasksGetCapabilities = require('../Tasks/GetCapabilities');
+
+var _TasksDescribeFeatureType = require('../Tasks/DescribeFeatureType');
+
+/**
+ * @class ogc.Services.WFS
+ * @extends {ogc.Services.Service}
+ */
+var L = global.L || require('leaflet');
+
+var WFSService = (function (_Service) {
+  _inherits(WFSService, _Service);
+
+  /**
+   * @param  {Object} options
+   */
+
+  function WFSService(options) {
+    _classCallCheck(this, WFSService);
+
+    _get(Object.getPrototypeOf(WFSService.prototype), 'constructor', this).call(this, options);
+  }
+
+  /**
+   * @return {ogc.Tasks.GetFeature}
+   */
+
+  _createClass(WFSService, [{
+    key: 'getFeature',
+    value: function getFeature() {
+      return (0, _TasksGetFeature.getFeature)(this);
+    }
+
+    /**
+     * @return {ogc.Tasks.DescribeFeatureType}
+     */
+  }, {
+    key: 'describeFeatureType',
+    value: function describeFeatureType() {
+      return (0, _TasksDescribeFeatureType.describeFeatureType)(this);
+    }
+  }]);
+
+  return WFSService;
+})(_Service2.Service);
+
+exports.WFSService = WFSService;
+
+function wfsService(options) {
+  return new WFSService(options);
+}
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{"../Tasks/DescribeFeatureType":45,"../Tasks/GetCapabilities":46,"../Tasks/GetFeature":47,"./Service":41,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],43:[function(require,module,exports){
+(function (global){
+'use strict';
+
+var _get = require('babel-runtime/helpers/get')['default'];
+
+var _inherits = require('babel-runtime/helpers/inherits')['default'];
+
+var _createClass = require('babel-runtime/helpers/create-class')['default'];
+
+var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
 
 Object.defineProperty(exports, '__esModule', {
   value: true
 });
-exports.wms = wms;
-
-var _leaflet = require('leaflet');
-
-var _leaflet2 = _interopRequireDefault(_leaflet);
+exports.wmsService = wmsService;
 
 var _Service2 = require('./Service');
 
-var _Service3 = _interopRequireDefault(_Service2);
-
 var _TasksGetCapabilities = require("../Tasks/GetCapabilities");
-
-var _TasksGetCapabilities2 = _interopRequireDefault(_TasksGetCapabilities);
 
 var _TasksGetFeatureInfo = require("../Tasks/GetFeatureInfo");
 
-var _TasksGetFeatureInfo2 = _interopRequireDefault(_TasksGetFeatureInfo);
-
 var _TasksGetLegendGraphic = require("../Tasks/GetLegendGraphic");
 
-var _TasksGetLegendGraphic2 = _interopRequireDefault(_TasksGetLegendGraphic);
+/**
+ * @class OgcLeaflet.Services.WMSService
+ * @extends {OgcLeaflet.Services.Service}
+ */
+var L = global.L || require('leaflet');
 
-var WMS = (function (_Service) {
-  _inherits(WMS, _Service);
+var WMSService = (function (_Service) {
+  _inherits(WMSService, _Service);
 
-  function WMS(options) {
-    _classCallCheck(this, WMS);
+  /**
+   * @param  {Object} options
+   */
 
-    _get(Object.getPrototypeOf(WMS.prototype), 'constructor', this).call(this, options);
+  function WMSService(options) {
+    _classCallCheck(this, WMSService);
+
+    _get(Object.getPrototypeOf(WMSService.prototype), 'constructor', this).call(this, options);
   }
 
-  _createClass(WMS, [{
+  /**
+   * @return {OgcLeaflet.Tasks.GetCapabilities}
+   */
+
+  _createClass(WMSService, [{
     key: 'getCapabilities',
     value: function getCapabilities() {
-      return (0, _TasksGetCapabilities2['default'])(this);
+      return (0, _TasksGetCapabilities.getCapabilities)(this);
     }
+
+    /**
+     * @return {OgcLeaflet.Tasks.GetCapabilities}
+     */
   }, {
     key: 'getFeatureInfo',
     value: function getFeatureInfo() {
-      return (0, _TasksGetFeatureInfo2['default'])(this);
+      return (0, _TasksGetFeatureInfo.getFeatureInfo)(this);
     }
+
+    // alias
   }, {
-    key: 'getLegendGraphics',
-    value: function getLegendGraphics() {
-      return (0, _TasksGetLegendGraphic2['default'])(this);
+    key: 'identify',
+    value: function identify() {
+      return this.getFeatureInfo();
+    }
+
+    /**
+     * @return {OgcLeaflet.Tasks.GetLegendGraphic}
+     */
+  }, {
+    key: 'getLegendGraphic',
+    value: function getLegendGraphic() {
+      return (0, _TasksGetLegendGraphic.getLegendGraphic)(this);
+    }
+
+    // alias
+  }, {
+    key: 'legend',
+    value: function legend() {
+      return this.getLegendGraphic();
     }
   }]);
 
-  return WMS;
-})(_Service3['default']);
+  return WMSService;
+})(_Service2.Service);
 
-exports['default'] = WMS;
+exports.WMSService = WMSService;
 
-function wms(options) {
-  return new WMS(options);
+function wmsService(options) {
+  return new WMSService(options);
 }
 
-},{"../Tasks/GetCapabilities":45,"../Tasks/GetFeatureInfo":47,"../Tasks/GetLegendGraphic":48,"./Service":40,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"babel-runtime/helpers/interop-require-default":13,"leaflet":undefined}],43:[function(require,module,exports){
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{"../Tasks/GetCapabilities":46,"../Tasks/GetFeatureInfo":48,"../Tasks/GetLegendGraphic":49,"./Service":41,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],44:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1008,7 +1119,8 @@ var Support = {
 exports.Support = Support;
 exports['default'] = Support;
 
-},{}],44:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
+(function (global){
 'use strict';
 
 var _get = require('babel-runtime/helpers/get')['default'];
@@ -1019,25 +1131,18 @@ var _createClass = require('babel-runtime/helpers/create-class')['default'];
 
 var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
 
-var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
-
 Object.defineProperty(exports, '__esModule', {
   value: true
 });
 exports.describeFeatureType = describeFeatureType;
 
-var _leaflet = require('leaflet');
-
-var _leaflet2 = _interopRequireDefault(_leaflet);
-
 var _Task2 = require('./Task');
-
-var _Task3 = _interopRequireDefault(_Task2);
 
 /**
  * @class OgcLeaflet.Tasks.DescribeFeatureType
  * @extends {OgcLeaflet.Tasks.Task}
  */
+var L = global.L || require('leaflet');
 
 var DescribeFeatureType = (function (_Task) {
   _inherits(DescribeFeatureType, _Task);
@@ -1050,7 +1155,7 @@ var DescribeFeatureType = (function (_Task) {
     _classCallCheck(this, DescribeFeatureType);
 
     _get(Object.getPrototypeOf(DescribeFeatureType.prototype), 'constructor', this).call(this, endpoint);
-    _leaflet2['default'].Util.extend(this.params, {
+    L.Util.extend(this.params, {
       service: 'WFS',
       request: 'DescribeFeatureType'
     });
@@ -1063,27 +1168,29 @@ var DescribeFeatureType = (function (_Task) {
 
   _createClass(DescribeFeatureType, [{
     key: 'layers',
-    set: function set() {
-      var layers = arguments.length <= 0 || arguments[0] === undefined ? [] : arguments[0];
+    value: function layers() {
+      var _layers = arguments.length <= 0 || arguments[0] === undefined ? [] : arguments[0];
 
-      if (_leaflet2['default'].Util.isArray(layers)) {
-        layers = layers.join(',');
+      if (L.Util.isArray(_layers)) {
+        _layers = _layers.join(',');
       }
-      this.params.typeNames = layers;
+      this.params.typeNames = _layers;
       return this;
     }
   }]);
 
   return DescribeFeatureType;
-})(_Task3['default']);
+})(_Task2.Task);
 
-exports['default'] = DescribeFeatureType;
+exports.DescribeFeatureType = DescribeFeatureType;
 
 function describeFeatureType(endpoint) {
   return new DescribeFeatureType(endpoint);
 }
 
-},{"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"babel-runtime/helpers/interop-require-default":13,"leaflet":undefined}],45:[function(require,module,exports){
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{"./Task":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],46:[function(require,module,exports){
 'use strict';
 
 var _get = require('babel-runtime/helpers/get')['default'];
@@ -1094,16 +1201,12 @@ var _createClass = require('babel-runtime/helpers/create-class')['default'];
 
 var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
 
-var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
-
 Object.defineProperty(exports, '__esModule', {
   value: true
 });
 exports.getCapabilities = getCapabilities;
 
 var _Task2 = require('./Task');
-
-var _Task3 = _interopRequireDefault(_Task2);
 
 /**
  * @class OgcLeaflet.Tasks.GetCapabilities
@@ -1147,15 +1250,16 @@ var GetCapabilities = (function (_Task) {
   }]);
 
   return GetCapabilities;
-})(_Task3['default']);
+})(_Task2.Task);
 
-exports['default'] = GetCapabilities;
+exports.GetCapabilities = GetCapabilities;
 
 function getCapabilities(endpoint) {
   return new GetCapabilities(endpoint);
 }
 
-},{"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"babel-runtime/helpers/interop-require-default":13}],46:[function(require,module,exports){
+},{"./Task":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11}],47:[function(require,module,exports){
+(function (global){
 'use strict';
 
 var _get = require('babel-runtime/helpers/get')['default'];
@@ -1166,26 +1270,19 @@ var _createClass = require('babel-runtime/helpers/create-class')['default'];
 
 var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
 
-var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
-
 Object.defineProperty(exports, '__esModule', {
   value: true
 });
 exports.getFeature = getFeature;
 
-var _leaflet = require('leaflet');
-
-var _leaflet2 = _interopRequireDefault(_leaflet);
-
 var _Task2 = require('./Task');
-
-var _Task3 = _interopRequireDefault(_Task2);
 
 var _Util = require('../Util');
 
 /**
  * @class OgcLeaflet.Tasks.GetFeature
  */
+var L = global.L || require('leaflet');
 
 var GetFeature = (function (_Task) {
   _inherits(GetFeature, _Task);
@@ -1202,7 +1299,7 @@ var GetFeature = (function (_Task) {
     /**
      * @type {Object}
      */
-    _leaflet2['default'].Util.extend(this.params, {
+    L.Util.extend(this.params, {
       srsName: 'EPSG:4326',
       request: 'GetFeature',
       info_format: 'application/json'
@@ -1219,13 +1316,73 @@ var GetFeature = (function (_Task) {
    */
 
   _createClass(GetFeature, [{
-    key: 'sortBy',
+    key: 'version',
+    value: function version() {
+      var _version = arguments.length <= 0 || arguments[0] === undefined ? '2.0.0' : arguments[0];
+
+      this.params.version = _version;
+      return this;
+    }
+
+    /**
+     * @param  {Number} max
+     * @return {GetFeature}
+     */
+  }, {
+    key: 'limit',
+    value: function limit() {
+      var max = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
+
+      if (max) {
+        this[parseFloat(this.params.version) >= 2 ? 'count' : 'maxFeatures'] = max;
+      }
+      return this;
+    }
+
+    /**
+     * @param  {String} srs
+     * @return {GetFeature}
+     */
+  }, {
+    key: 'srs',
+    value: function srs(_srs) {
+      this.params.srsName = _srs;
+      return this;
+    }
+
+    /**
+     * @param  {String} srs
+     * @return {GetFeature}
+     */
+  }, {
+    key: 'sr',
+    value: function sr(srs) {
+      return this.srs(srs);
+    }
+
+    /**
+     * @param  {Array.<String>|String}  layers
+     * @return {GetFeature}
+     */
+  }, {
+    key: 'layers',
+    value: function layers() {
+      var _layers = arguments.length <= 0 || arguments[0] === undefined ? [] : arguments[0];
+
+      if (L.Util.isArray(_layers)) {
+        _layers = _layers.join(',');
+      }
+      this.params.typeNames = _layers;
+      return this;
+    }
 
     /**
      * @param  {String}   attribute
      * @param  {Boolean=} descending
      * @return {GetFeature}
      */
+  }, {
+    key: 'sortBy',
     value: function sortBy(attribute) {
       var descending = arguments.length <= 1 || arguments[1] === undefined ? false : arguments[1];
 
@@ -1241,72 +1398,12 @@ var GetFeature = (function (_Task) {
      * @return {GetFeature}
      */
   }, {
-    key: 'version',
-    set: function set() {
-      var version = arguments.length <= 0 || arguments[0] === undefined ? '2.0.0' : arguments[0];
-
-      this.params.version = version;
-      return this;
-    }
-
-    /**
-     * @param  {Number} max
-     * @return {GetFeature}
-     */
-  }, {
-    key: 'limit',
-    set: function set() {
-      var max = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
-
-      if (max) {
-        this[parseFloat(this.params.version) >= 2 ? 'count' : 'maxFeatures'] = max;
-      }
-      return this;
-    }
-
-    /**
-     * @param  {String} srs
-     * @return {GetFeature}
-     */
-  }, {
-    key: 'srs',
-    set: function set(srs) {
-      this.params.srsName = srs;
-      return this;
-    }
-
-    /**
-     * @param  {String} srs
-     * @return {GetFeature}
-     */
-  }, {
-    key: 'sr',
-    set: function set(srs) {
-      return this.srs(srs);
-    }
-
-    /**
-     * @param  {Array.<String>|String}  layers
-     * @return {GetFeature}
-     */
-  }, {
-    key: 'layers',
-    set: function set() {
-      var layers = arguments.length <= 0 || arguments[0] === undefined ? [] : arguments[0];
-
-      if (_leaflet2['default'].Util.isArray(layers)) {
-        layers = layers.join(',');
-      }
-      this.params.typeNames = layers;
-      return this;
-    }
-  }, {
     key: 'property',
-    set: function set(property) {
-      if (_leaflet2['default'].Util.isArray(property)) {
-        property = property.join(',');
+    value: function property(_property) {
+      if (L.Util.isArray(_property)) {
+        _property = _property.join(',');
       }
-      this.params.propertyName = property;
+      this.params.propertyName = _property;
       return this;
     }
 
@@ -1316,8 +1413,8 @@ var GetFeature = (function (_Task) {
      */
   }, {
     key: 'fields',
-    set: function set(fields) {
-      return this.property(fields);
+    value: function fields(_fields) {
+      return this.property(_fields);
     }
 
     /**
@@ -1326,8 +1423,8 @@ var GetFeature = (function (_Task) {
      */
   }, {
     key: 'bounds',
-    set: function set(bounds) {
-      return this.bbox((0, _Util.boundsToBBox)(bounds));
+    value: function bounds(_bounds) {
+      return this.bbox((0, _Util.boundsToBBox)(_bounds));
     }
 
     /**
@@ -1336,22 +1433,25 @@ var GetFeature = (function (_Task) {
      */
   }, {
     key: 'bbox',
-    set: function set(bbox) {
-      this.params.bbox = bbox.join(',');
+    value: function bbox(_bbox) {
+      this.params.bbox = _bbox.join(',');
       return this;
     }
   }]);
 
   return GetFeature;
-})(_Task3['default']);
+})(_Task2.Task);
 
-exports['default'] = GetFeature;
+exports.GetFeature = GetFeature;
 
 function getFeature(endpoint) {
   return new GetFeature(endpoint);
 }
 
-},{"../Util":50,"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"babel-runtime/helpers/interop-require-default":13,"leaflet":undefined}],47:[function(require,module,exports){
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{"../Util":51,"./Task":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],48:[function(require,module,exports){
+(function (global){
 'use strict';
 
 var _get = require('babel-runtime/helpers/get')['default'];
@@ -1362,27 +1462,20 @@ var _createClass = require('babel-runtime/helpers/create-class')['default'];
 
 var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
 
-var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
-
 Object.defineProperty(exports, '__esModule', {
   value: true
 });
 exports.getFeatureInfo = getFeatureInfo;
 
-var _leaflet = require('leaflet');
-
-var _leaflet2 = _interopRequireDefault(_leaflet);
-
 var _Task2 = require('./Task');
-
-var _Task3 = _interopRequireDefault(_Task2);
 
 var _Util = require('../Util');
 
 /**
- * @class OgcLeaflet.Tasks.GetFeatureInfo
- * @extends {OgcLeaflet.Tasks.Task}
+ * @class ogc.Tasks.GetFeatureInfo
+ * @extends {ogc.Tasks.Task}
  */
+var L = global.L || require('leaflet');
 
 var GetFeatureInfo = (function (_Task) {
   _inherits(GetFeatureInfo, _Task);
@@ -1395,7 +1488,8 @@ var GetFeatureInfo = (function (_Task) {
     _classCallCheck(this, GetFeatureInfo);
 
     _get(Object.getPrototypeOf(GetFeatureInfo.prototype), 'constructor', this).call(this, endpoint);
-    _leaflet2['default'].Util.extend(this.params, {
+
+    L.Util.extend(this.params, {
       request: 'GetFeatureInfo',
       exceptions: 'application/json',
       srs: 'EPSG:4326',
@@ -1409,27 +1503,10 @@ var GetFeatureInfo = (function (_Task) {
    */
 
   _createClass(GetFeatureInfo, [{
-    key: 'size',
-
-    /**
-     * @param  {L.Point} size
-     * @return {GetFeatureInfo}
-     */
-    value: function size(_size) {
-      this.params.width = _size.x;
-      this.params.height = _size.y;
-      return this;
-    }
-
-    /**
-     * @param  {Array.<String>|String} properties
-     * @return {GetFeatureInfo}
-     */
-  }, {
     key: 'at',
-    set: function set(latlng) {
+    value: function at(latlng) {
       var px = undefined;
-      if (latlng instanceof _leaflet2['default'].LatLng) {
+      if (latlng instanceof L.LatLng) {
         if (this._map) {
           // project
           px = this._map.lalLngToContainerPixel(latlng);
@@ -1452,10 +1529,10 @@ var GetFeatureInfo = (function (_Task) {
      */
   }, {
     key: 'tolerance',
-    set: function set() {
-      var tolerance = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
+    value: function tolerance() {
+      var _tolerance = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
 
-      this.params.buffer = tolerance;
+      this.params.buffer = _tolerance;
       return this;
     }
 
@@ -1465,13 +1542,13 @@ var GetFeatureInfo = (function (_Task) {
      */
   }, {
     key: 'layers',
-    set: function set() {
-      var layers = arguments.length <= 0 || arguments[0] === undefined ? [] : arguments[0];
+    value: function layers() {
+      var _layers = arguments.length <= 0 || arguments[0] === undefined ? [] : arguments[0];
 
-      if (_leaflet2['default'].Util.isArray(layers)) {
-        layers = layers.join(',');
+      if (L.Util.isArray(_layers)) {
+        _layers = _layers.join(',');
       }
-      this.params.layers = layers;
+      this.params.layers = _layers;
       return this;
     }
 
@@ -1481,18 +1558,35 @@ var GetFeatureInfo = (function (_Task) {
      */
   }, {
     key: 'limit',
-    set: function set() {
-      var limit = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
+    value: function limit() {
+      var _limit = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
 
-      this.params.feature_count = limit;
+      this.params.feature_count = _limit;
       return this;
     }
+
+    /**
+     * @param  {L.Point} size
+     * @return {GetFeatureInfo}
+     */
+  }, {
+    key: 'size',
+    value: function size(_size) {
+      this.params.width = _size.x;
+      this.params.height = _size.y;
+      return this;
+    }
+
+    /**
+     * @param  {Array.<String>|String} properties
+     * @return {GetFeatureInfo}
+     */
   }, {
     key: 'returnProperties',
-    set: function set() {
+    value: function returnProperties() {
       var properties = arguments.length <= 0 || arguments[0] === undefined ? [] : arguments[0];
 
-      this.params.propertyName = _leaflet2['default'].Util.isArray(properties) ? properties.join(',') : properties;
+      this.params.propertyName = L.Util.isArray(properties) ? properties.join(',') : properties;
       return this;
     }
 
@@ -1502,8 +1596,8 @@ var GetFeatureInfo = (function (_Task) {
      */
   }, {
     key: 'bounds',
-    set: function set(bounds) {
-      return this.bbox((0, _Util.boundsToBBox)(bounds));
+    value: function bounds(_bounds) {
+      return this.bbox((0, _Util.boundsToBBox)(_bounds));
     }
 
     /**
@@ -1512,22 +1606,25 @@ var GetFeatureInfo = (function (_Task) {
      */
   }, {
     key: 'bbox',
-    set: function set(bbox) {
-      this.params.bbox = bbox.join(',');
+    value: function bbox(_bbox) {
+      this.params.bbox = _bbox.join(',');
       return this;
     }
   }]);
 
   return GetFeatureInfo;
-})(_Task3['default']);
+})(_Task2.Task);
 
-exports['default'] = GetFeatureInfo;
+exports.GetFeatureInfo = GetFeatureInfo;
 
 function getFeatureInfo(endpoint) {
   return new GetFeatureInfo(endpoint);
 }
 
-},{"../Util":50,"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"babel-runtime/helpers/interop-require-default":13,"leaflet":undefined}],48:[function(require,module,exports){
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{"../Util":51,"./Task":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],49:[function(require,module,exports){
+(function (global){
 'use strict';
 
 var _get = require('babel-runtime/helpers/get')['default'];
@@ -1538,31 +1635,24 @@ var _createClass = require('babel-runtime/helpers/create-class')['default'];
 
 var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
 
-var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
-
 Object.defineProperty(exports, '__esModule', {
   value: true
 });
 exports.getLegendGraphic = getLegendGraphic;
 
-var _leaflet = require('leaflet');
-
-var _leaflet2 = _interopRequireDefault(_leaflet);
-
 var _Task2 = require('./Task');
 
-var _Task3 = _interopRequireDefault(_Task2);
-
 /**
- * @class OgcLeaflet.Tasks.GetLegendGrapic
- * @extends {OgcLeaflet.Tasks.Task}
+ * @class ogc.Tasks.GetLegendGrapic
+ * @extends {ogc.Tasks.Task}
  */
+var L = global.L || require('leaflet');
 
 var GetLegendGraphic = (function (_Task) {
   _inherits(GetLegendGraphic, _Task);
 
   /**
-   * @param  {OgcLeaflet.Services.Service|String} endpoint
+   * @param  {ogc.Services.Service|String} endpoint
    */
 
   function GetLegendGraphic(endpoint) {
@@ -1581,7 +1671,7 @@ var GetLegendGraphic = (function (_Task) {
       fontStyle: 'normal'
     };
 
-    _leaflet2['default'].Util.extend(this.params, {
+    L.Util.extend(this.params, {
       'request': 'GetLegendGraphic',
       'format': 'image/png'
     });
@@ -1594,8 +1684,8 @@ var GetLegendGraphic = (function (_Task) {
 
   _createClass(GetLegendGraphic, [{
     key: 'format',
-    set: function set(format) {
-      this.params.format = format;
+    value: function format(_format) {
+      this.params.format = _format;
       return this;
     }
 
@@ -1605,8 +1695,8 @@ var GetLegendGraphic = (function (_Task) {
      */
   }, {
     key: 'layer',
-    set: function set(layer) {
-      this.params.layer = layer;
+    value: function layer(_layer) {
+      this.params.layer = _layer;
       return this;
     }
 
@@ -1622,10 +1712,10 @@ var GetLegendGraphic = (function (_Task) {
      * @param  {Object} styles
      * @return {GetLegendGraphic}
      */
-    set: function set() {
-      var styles = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+    value: function styles() {
+      var _styles = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
-      this.params.legend_options = this._formatLegendOptions(_leaflet2['default'].Util.extend({}, this.defaultLegendStyles, styles));
+      this.params.legend_options = this._formatLegendOptions(L.Util.extend({}, this.defaultLegendStyles, _styles));
       return this;
     }
   }], [{
@@ -1645,15 +1735,18 @@ var GetLegendGraphic = (function (_Task) {
   }]);
 
   return GetLegendGraphic;
-})(_Task3['default']);
+})(_Task2.Task);
 
-exports['default'] = GetLegendGraphic;
+exports.GetLegendGraphic = GetLegendGraphic;
 
 function getLegendGraphic(endpoint) {
   return new GetLegendGraphic(endpoint);
 }
 
-},{"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"babel-runtime/helpers/interop-require-default":13,"leaflet":undefined}],49:[function(require,module,exports){
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{"./Task":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],50:[function(require,module,exports){
+(function (global){
 'use strict';
 
 var _createClass = require('babel-runtime/helpers/create-class')['default'];
@@ -1667,10 +1760,6 @@ Object.defineProperty(exports, '__esModule', {
 });
 exports.task = task;
 
-var _leaflet = require('leaflet');
-
-var _leaflet2 = _interopRequireDefault(_leaflet);
-
 var _Support = require('../Support');
 
 var _Util = require('../Util');
@@ -1679,7 +1768,17 @@ var _Request = require('../Request');
 
 var _Request2 = _interopRequireDefault(_Request);
 
+/**
+ * @class ogc.Tasks.Task
+ */
+var L = global.L || require('leaflet');
+
 var Task = (function () {
+
+  /**
+   * @param  {ogc.Services.Service|String} endpoint
+   */
+
   function Task(endpoint) {
     _classCallCheck(this, Task);
 
@@ -1692,14 +1791,14 @@ var Task = (function () {
     // OGC Service or an instance of OgcLeaflet.Service
     if (endpoint.request && endpoint.options) {
       this._service = endpoint;
-      _leaflet2['default'].Util.setOptions(this, endpoint.options);
+      L.Util.setOptions(this, endpoint.options);
     } else {
-      _leaflet2['default'].Util.setOptions(this, endpoint);
+      L.Util.setOptions(this, endpoint);
       this.options.url = (0, _Util.cleanUrl)(endpoint.url);
     }
 
     // clone default params into this object
-    this.params = _leaflet2['default'].Util.extend({}, this.params || {});
+    this.params = L.Util.extend({}, this.params || {});
 
     // generate setter methods based on the setters object
     // implimented a child class
@@ -1716,7 +1815,7 @@ var Task = (function () {
   _createClass(Task, [{
     key: 'generateSetter',
     value: function generateSetter(param, context) {
-      return _leaflet2['default'].Util.bind(function (value) {
+      return L.Util.bind(function (value) {
         this.params[param] = value;
         return this;
       }, context);
@@ -1769,10 +1868,11 @@ function task(options) {
 
 exports['default'] = task;
 
-},{"../Request":39,"../Support":43,"../Util":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/interop-require-default":13,"leaflet":undefined}],50:[function(require,module,exports){
-'use strict';
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
+},{"../Request":40,"../Support":44,"../Util":51,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/interop-require-default":13,"leaflet":"leaflet"}],51:[function(require,module,exports){
+(function (global){
+'use strict';
 
 Object.defineProperty(exports, '__esModule', {
   value: true
@@ -1780,10 +1880,7 @@ Object.defineProperty(exports, '__esModule', {
 exports.shallowClone = shallowClone;
 exports.cleanUrl = cleanUrl;
 exports.boundsToBBox = boundsToBBox;
-
-var _leaflet = require('leaflet');
-
-var _leaflet2 = _interopRequireDefault(_leaflet);
+var L = global.L || require('leaflet');
 
 // checks if 2 x,y points are equal
 function pointsEqual(a, b) {
@@ -1830,7 +1927,7 @@ function shallowClone(obj) {
 
 function cleanUrl(url) {
   // trim leading and trailing spaces, but not spaces inside the url
-  url = _leaflet2['default'].Util.trim(url);
+  url = L.Util.trim(url);
 
   // add a trailing slash to the url if the user omitted it
   if (url[url.length - 1] !== '/') {
@@ -1858,7 +1955,10 @@ var Util = {
 exports.Util = Util;
 exports['default'] = Util;
 
-},{"babel-runtime/helpers/interop-require-default":13,"leaflet":undefined}]},{},[1])
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{"leaflet":"leaflet"}]},{},[1])(1)
+});
 
 
 //# sourceMappingURL=ogc-leaflet-src.js.map

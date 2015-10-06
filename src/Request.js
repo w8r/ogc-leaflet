@@ -1,4 +1,4 @@
-import L from 'leaflet';
+const L  = global.L || require('leaflet');
 import Support from './Support';
 import { warn } from './Util';
 
@@ -183,7 +183,12 @@ get.CORS = xmlHttpGet;
 get.JSONP = jsonp;
 
 // choose the correct AJAX handler depending on CORS support
-export { get };
+// export the Request object to call the different handlers for debugging
+export const Request = {
+  request: request,
+  get: get,
+  post: xmlHttpPost
+};
 
 // always use XMLHttpRequest for posts
 export { xmlHttpPost as post };

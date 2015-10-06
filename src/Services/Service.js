@@ -1,8 +1,7 @@
-import L from 'leaflet';
+const L  = global.L || require('leaflet');
 import { cors } from '../Support';
 import { cleanUrl } from '../Util';
-import Request from '../Request';
-
+import { Request } from '../Request';
 
 export class Service {
 
@@ -125,8 +124,10 @@ export class Service {
 }
 
 Object.getOwnPropertyNames(L.Mixin.Events).forEach(function(name) {
-  if (name !== "constructor") Object.defineProperty(Service, name,
+  if (name !== "constructor") {
+    Object.defineProperty(Service.prototype, name,
       Object.getOwnPropertyDescriptor(L.Mixin.Events, name));
+  }
 });
 
 export function service(options) {

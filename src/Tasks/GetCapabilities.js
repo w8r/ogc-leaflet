@@ -1,10 +1,10 @@
-import Task from './Task'
+import { Task } from './Task'
 
 /**
  * @class OgcLeaflet.Tasks.GetCapabilities
  * @extends {OgcLeaflet.Tasks.Task}
  */
-export default class GetCapabilities extends Task {
+export class GetCapabilities extends Task {
 
   /**
    * @param  {Object|String} endpoint

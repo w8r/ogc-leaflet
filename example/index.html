@@ -4,8 +4,21 @@
     	<link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.5/leaflet.css">
     	<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.5/leaflet-src.js"></script>
         <script type="text/javascript" src="../dist/ogc-leaflet-src.js"></script>
+        <link rel="stylesheet" type="text/css" href="style.css">
     </head>
     <body>
     	<div id="map"></div>
     </body>
+    <script type="text/javascript">
+    var map = L.map('map').setView([-2.2406396093827206, 160.33447265625], 4);
+    var wms = L.ogc.wms(
+      'http://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv', {
+        layers: [
+          'GEBCO_LATEST_SID',
+          'GEBCO_08_GRID',
+          'GEBCO_LATEST'
+        ]
+      }
+    ).addTo(map);
+    </script>
 </html>
