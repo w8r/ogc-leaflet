@@ -18,6 +18,8 @@ export class Task {
       useCors: cors
     };
 
+    this.path = '';
+
     // endpoint can be either a url (and options) for an
     // OGC Service or an instance of OgcLeaflet.Service
     if (endpoint.request && endpoint.options) {
@@ -58,6 +60,10 @@ export class Task {
     return this;
   }
 
+  /**
+   * @param  {L.Map} map
+   * @return {ogc.Tasks.Task}
+   */
   on(map) {
     this._map = map;
     return this;

@@ -10,6 +10,24 @@ export class WMS extends L.TileLayer.WMS {
     this.service = wmsService(options);
   }
 
+  /**
+   * @return {ogc.Tasks.GetFeatureInfo}
+   */
+  identify () {
+    return this.service.identify()
+      .on(this._map) // link to map and pre-set layers
+      .layers(this.options.layers);
+  }
+
+  /**
+   * @param  {Function} callback
+   * @param  {*=}       context
+   * @return {Request}
+   */
+  metadata (callback, context) {
+    return this.service.metadata(callback, context);
+  }
+
 }
 
 export function wms(url, options) {

@@ -1,4 +1,4 @@
-import { Task } from './Task'
+import { Task } from './Task';
 
 /**
  * @class OgcLeaflet.Tasks.GetCapabilities
@@ -13,7 +13,8 @@ export class GetCapabilities extends Task {
     super(endpoint);
 
     L.Util.extend(this.params, {
-      request: 'GetCapabilities'
+      request: 'GetCapabilities',
+      f: 'text'
     });
 
     if (this._service) {
@@ -26,8 +27,21 @@ export class GetCapabilities extends Task {
    * @return {GetCapabilities}
    */
   service (type = 'WMS') {
-    this.params = type;
+    this.params.service = type;
     return this;
+  }
+
+  /**
+   * @param  {Function} callback
+   * @param  {*=}       context
+   * @return {GetCapabilites}
+   */
+  run (callback, context) {
+    return super.request(function(error, text) {
+      // parse capabilities here
+      // if (!error) { text = this._parseCapabilities(text); }
+      callback.call(context, error, text);
+    }, context);
   }
 }
 

@@ -2,18 +2,18 @@ const L  = global.L || require('leaflet');
 import Support from './Support';
 import { warn } from './Util';
 
-var callbacks = 0;
+let callbacks = 0;
 
 function serialize(params) {
-  var data = '';
+  let data = '';
 
-  params.f = params.f || 'json';
+  // params.format = params.format || 'application/json';
 
-  for (var key in params) {
+  for (let key in params) {
     if (params.hasOwnProperty(key)) {
-      var param = params[key];
-      var type = Object.prototype.toString.call(param);
-      var value;
+      let param = params[key];
+      let type = Object.prototype.toString.call(param);
+      let value;
 
       if (data.length) {
         data += '&';
@@ -37,8 +37,8 @@ function serialize(params) {
   return data;
 }
 
-function createRequest(callback, context) {
-  var httpRequest = new window.XMLHttpRequest();
+function createRequest(callback, context, text = false) {
+  let httpRequest = new window.XMLHttpRequest();
 
   httpRequest.onerror = function(e) {
     httpRequest.onreadystatechange = L.Util.falseFn;
@@ -52,18 +52,24 @@ function createRequest(callback, context) {
   };
 
   httpRequest.onreadystatechange = function() {
-    var response;
-    var error;
+    let response, error;
 
     if (httpRequest.readyState === 4) {
-      try {
-        response = JSON.parse(httpRequest.responseText);
-      } catch (e) {
-        response = null;
-        error = {
-          code: 500,
-          message: 'Could not parse response as JSON. This could also be caused by a CORS or XMLHttpRequest error.'
-        };
+      if (text) {
+        response = httpRequest.responseText;
+        error = null;
+      } else {
+        try {
+          response = JSON.parse(httpRequest.responseText);
+        } catch (e) {
+          response = null;
+          error = {
+            code: 500,
+            message: 'Could not parse response as JSON. ' +
+            'This could also be caused by a CORS or XMLHttpRequest error.',
+            content: httpRequest.responseText
+          };
+        }
       }
 
       if (!error && response.error) {
@@ -81,7 +87,9 @@ function createRequest(callback, context) {
 }
 
 function xmlHttpPost(url, params, callback, context) {
-  var httpRequest = createRequest(callback, context);
+  let httpRequest = createRequest(callback, context, params.f === 'text');
+  delete params.f;
+
   httpRequest.open('POST', url);
   httpRequest.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
   httpRequest.send(serialize(params));
@@ -90,7 +98,8 @@ function xmlHttpPost(url, params, callback, context) {
 }
 
 function xmlHttpGet(url, params, callback, context) {
-  var httpRequest = createRequest(callback, context);
+  let httpRequest = createRequest(callback, context, params.f === 'text');
+  delete params.f;
 
   httpRequest.open('GET', url + '?' + serialize(params), true);
   httpRequest.send(null);
@@ -100,28 +109,37 @@ function xmlHttpGet(url, params, callback, context) {
 
 // AJAX handlers for CORS (modern browsers) or JSONP (older browsers)
 export function request(url, params, callback, context) {
-  var paramString = serialize(params);
-  var httpRequest = createRequest(callback, context);
-  var requestLength = (url + '?' + paramString).length;
+  let httpRequest = createRequest(callback, context, params.f === 'text');
+  delete params.f;
 
-  // request is less then 2000 characters and the browser supports CORS, make GET request with XMLHttpRequest
+  let paramString = serialize(params);
+  let requestLength = (url + '?' + paramString).length;
+
+  // request is less then 2000 characters and the browser supports CORS,
+  // make GET request with XMLHttpRequest
   if (requestLength <= 2000 && Support.cors) {
     httpRequest.open('GET', url + '?' + paramString);
     httpRequest.send(null);
 
-  // request is less more then 2000 characters and the browser supports CORS, make POST request with XMLHttpRequest
+  // request is less more then 2000 characters and the browser supports CORS,
+  // make POST request with XMLHttpRequest
   } else if (requestLength > 2000 && Support.cors) {
     httpRequest.open('POST', url);
-    httpRequest.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    httpRequest.setRequestHeader(
+      'Content-Type', 'application/x-www-form-urlencoded');
     httpRequest.send(paramString);
 
-  // request is less more then 2000 characters and the browser does not support CORS, make a JSONP request
+  // request is less more then 2000 characters and the browser does not
+  // support CORS, make a JSONP request
   } else if (requestLength <= 2000 && !Support.cors) {
     return jsonp(url, params, callback, context);
 
-  // request is longer then 2000 characters and the browser does not support CORS, log a warning
+  // request is longer then 2000 characters and the browser does not
+  // support CORS, log a warning
   } else {
-    warn('a request to ' + url + ' was longer then 2000 characters and this browser cannot make a cross-domain post request. Please use a proxy http://esri.github.io/esri-leaflet/api-reference/request.html');
+    warn('a request to ' + url + ' was longer then 2000 characters and ' +
+      'this browser cannot make a cross-domain post request. Please use ' +
+      'a proxy http://esri.github.io/esri-leaflet/api-reference/request.html');
     return;
   }
 
@@ -129,22 +147,23 @@ export function request(url, params, callback, context) {
 }
 
 export function jsonp(url, params, callback, context) {
-  window._EsriLeafletCallbacks = window._EsriLeafletCallbacks || {};
-  var callbackId = 'c' + callbacks;
+  global._OgcLeafletCallbacks = global._OgcLeafletCallbacks || {};
+  let callbackId = 'c' + callbacks;
 
   params.callback = 'window._EsriLeafletCallbacks.' + callbackId;
 
-  var script = L.DomUtil.create('script', null, document.body);
+  let script = L.DomUtil.create('script', null, document.body);
   script.type = 'text/javascript';
   script.src = url + '?' + serialize(params);
   script.id = callbackId;
 
-  window._EsriLeafletCallbacks[callbackId] = function(response) {
-    if (window._EsriLeafletCallbacks[callbackId] !== true) {
-      var error;
-      var responseType = Object.prototype.toString.call(response);
+  global._EsriLeafletCallbacks[callbackId] = function(response) {
+    if (global._EsriLeafletCallbacks[callbackId] !== true) {
+      let error;
+      let responseType = Object.prototype.toString.call(response);
 
-      if (!(responseType === '[object Object]' || responseType === '[object Array]')) {
+      if (!(responseType === '[object Object]' ||
+        responseType === '[object Array]')) {
         error = {
           error: {
             code: 500,
@@ -160,7 +179,7 @@ export function jsonp(url, params, callback, context) {
       }
 
       callback.call(context, error, response);
-      window._EsriLeafletCallbacks[callbackId] = true;
+      global._EsriLeafletCallbacks[callbackId] = true;
     }
   };
 
@@ -170,7 +189,7 @@ export function jsonp(url, params, callback, context) {
     id: callbackId,
     url: script.src,
     abort: function() {
-      window._EsriLeafletCallbacks._callback[callbackId]({
+      global._EsriLeafletCallbacks._callback[callbackId]({
         code: 0,
         message: 'Request aborted.'
       });
@@ -178,7 +197,7 @@ export function jsonp(url, params, callback, context) {
   };
 }
 
-var get = ((Support.cors) ? xmlHttpGet : jsonp);
+let get = ((Support.cors) ? xmlHttpGet : jsonp);
 get.CORS = xmlHttpGet;
 get.JSONP = jsonp;
 

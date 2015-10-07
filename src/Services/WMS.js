@@ -25,6 +25,15 @@ export class WMSService extends Service {
   }
 
   /**
+   * @param  {Function} callback
+   * @param  {*=}       context
+   * @return {GetCapabilites}
+   */
+  metadata (callback, context) {
+    return this.getCapabilities().run(callback, context);
+  }
+
+  /**
    * @return {OgcLeaflet.Tasks.GetCapabilities}
    */
   getFeatureInfo() {

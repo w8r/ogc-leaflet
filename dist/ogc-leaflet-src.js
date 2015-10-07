@@ -9,11 +9,11 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 });
 
-var _srcOGCLeaflet = require('./src/OGCLeaflet');
+var _srcOgc = require('./src/ogc');
 
-_defaults(exports, _interopExportWildcard(_srcOGCLeaflet, _defaults));
+_defaults(exports, _interopExportWildcard(_srcOgc, _defaults));
 
-},{"./src/OGCLeaflet":39,"babel-runtime/helpers/defaults":9,"babel-runtime/helpers/interop-export-wildcard":12}],2:[function(require,module,exports){
+},{"./src/ogc":51,"babel-runtime/helpers/defaults":9,"babel-runtime/helpers/interop-export-wildcard":12}],2:[function(require,module,exports){
 module.exports = { "default": require("core-js/library/fn/object/create"), __esModule: true };
 },{"core-js/library/fn/object/create":14}],3:[function(require,module,exports){
 module.exports = { "default": require("core-js/library/fn/object/define-property"), __esModule: true };
@@ -421,6 +421,8 @@ var _get = require('babel-runtime/helpers/get')['default'];
 
 var _inherits = require('babel-runtime/helpers/inherits')['default'];
 
+var _createClass = require('babel-runtime/helpers/create-class')['default'];
+
 var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
 
 Object.defineProperty(exports, '__esModule', {
@@ -446,6 +448,29 @@ var WMS = (function (_L$TileLayer$WMS) {
     this.service = (0, _ServicesWMS.wmsService)(options);
   }
 
+  /**
+   * @return {ogc.Tasks.GetFeatureInfo}
+   */
+
+  _createClass(WMS, [{
+    key: 'identify',
+    value: function identify() {
+      return this.service.identify().on(this._map) // link to map and pre-set layers
+      .layers(this.options.layers);
+    }
+
+    /**
+     * @param  {Function} callback
+     * @param  {*=}       context
+     * @return {Request}
+     */
+  }, {
+    key: 'metadata',
+    value: function metadata(callback, context) {
+      return this.service.metadata(callback, context);
+    }
+  }]);
+
   return WMS;
 })(L.TileLayer.WMS);
 
@@ -457,87 +482,7 @@ function wms(url, options) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Services/WMS":43,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],39:[function(require,module,exports){
-(function (global){
-'use strict';
-
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-
-// import base
-
-var _Support = require('./Support');
-
-var _Util = require('./Util');
-
-var _Request = require('./Request');
-
-// import tasks
-
-var _TasksTask = require('./Tasks/Task');
-
-var _TasksGetFeature = require('./Tasks/GetFeature');
-
-var _TasksDescribeFeatureType = require('./Tasks/DescribeFeatureType');
-
-var _TasksGetLegendGraphic = require('./Tasks/GetLegendGraphic');
-
-//import { Find, find } from './Tasks/Find';
-//import { Identify, identify } from './Tasks/Identify';
-//import { IdentifyFeatures, identifyFeatures } from './Tasks/IdentifyFeatures';
-//import { IdentifyImage, identifyImage } from './Tasks/IdentifyImage';
-
-// import services
-
-var _ServicesService = require('./Services/Service');
-
-var _ServicesWFS = require('./Services/WFS');
-
-var _ServicesWMS = require('./Services/WMS');
-
-//import { ImageService, imageService } from './Services/ImageService';
-//import { FeatureLayerService, featureLayerService } from './Services/FeatureLayerService';
-
-// import layers
-
-var _LayersWMS = require('./Layers/WMS');
-
-//import { TiledMapLayer, tiledMapLayer } from './Layers/TiledMapLayer';
-//import { RasterLayer } from './Layers/RasterLayer';
-//import { ImageMapLayer, imageMapLayer } from './Layers/ImageMapLayer';
-//import { DynamicMapLayer, dynamicMapLayer } from './Layers/DynamicMapLayer';
-//import { FeatureGrid } from './Layers/FeatureLayer/FeatureGrid';
-//import { FeatureManager } from './Layers/FeatureLayer/FeatureManager';
-//import { FeatureLayer, featureLayer } from './Layers/FeatureLayer/FeatureLayer';
-
-var L = global.L || require('leaflet');L.ogc = {
-  Service: _ServicesService.Service, service: _ServicesService.service,
-  WFSService: _ServicesWFS.WFSService, wfsService: _ServicesWFS.wfsService,
-  WMSService: _ServicesWMS.WMSService, wmsService: _ServicesWMS.wmsService,
-  Task: _TasksTask.Task, task: _TasksTask.task,
-  Util: _Util.Util,
-  get: _Request.get, post: _Request.post, request: _Request.request,
-  Support: _Support.Support,
-
-  GetCapabilities: _TasksGetFeature.GetCapabilities, getCapabilities: _TasksGetFeature.getCapabilities,
-  GetLegendGraphic: _TasksGetLegendGraphic.GetLegendGraphic, getLegendGraphic: _TasksGetLegendGraphic.getLegendGraphic,
-  GetFeatureInfo: _TasksGetFeature.GetFeatureInfo, getFeatureInfo: _TasksGetFeature.getFeatureInfo,
-  GetFeature: _TasksGetFeature.GetFeature, getFeature: _TasksGetFeature.getFeature,
-  DescribeFeatureType: _TasksDescribeFeatureType.DescribeFeatureType, describeFeatureType: _TasksDescribeFeatureType.describeFeatureType,
-
-  WMS: _LayersWMS.WMS, wms: _LayersWMS.wms,
-
-  // aliases
-  DynamicMapLayer: _LayersWMS.WMS
-};
-
-exports['default'] = L.ogc;
-module.exports = exports['default'];
-
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-
-},{"./Layers/WMS":38,"./Request":40,"./Services/Service":41,"./Services/WFS":42,"./Services/WMS":43,"./Support":44,"./Tasks/DescribeFeatureType":45,"./Tasks/GetFeature":47,"./Tasks/GetLegendGraphic":49,"./Tasks/Task":50,"./Util":51,"leaflet":"leaflet"}],40:[function(require,module,exports){
+},{"../Services/WMS":42,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],39:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -562,13 +507,13 @@ var callbacks = 0;
 function serialize(params) {
   var data = '';
 
-  params.f = params.f || 'json';
+  // params.format = params.format || 'application/json';
 
   for (var key in params) {
     if (params.hasOwnProperty(key)) {
       var param = params[key];
       var type = Object.prototype.toString.call(param);
-      var value;
+      var value = undefined;
 
       if (data.length) {
         data += '&';
@@ -592,6 +537,8 @@ function serialize(params) {
 }
 
 function createRequest(callback, context) {
+  var text = arguments.length <= 2 || arguments[2] === undefined ? false : arguments[2];
+
   var httpRequest = new window.XMLHttpRequest();
 
   httpRequest.onerror = function (e) {
@@ -606,18 +553,24 @@ function createRequest(callback, context) {
   };
 
   httpRequest.onreadystatechange = function () {
-    var response;
-    var error;
+    var response = undefined,
+        error = undefined;
 
     if (httpRequest.readyState === 4) {
-      try {
-        response = JSON.parse(httpRequest.responseText);
-      } catch (e) {
-        response = null;
-        error = {
-          code: 500,
-          message: 'Could not parse response as JSON. This could also be caused by a CORS or XMLHttpRequest error.'
-        };
+      if (text) {
+        response = httpRequest.responseText;
+        error = null;
+      } else {
+        try {
+          response = JSON.parse(httpRequest.responseText);
+        } catch (e) {
+          response = null;
+          error = {
+            code: 500,
+            message: 'Could not parse response as JSON. ' + 'This could also be caused by a CORS or XMLHttpRequest error.',
+            content: httpRequest.responseText
+          };
+        }
       }
 
       if (!error && response.error) {
@@ -635,7 +588,9 @@ function createRequest(callback, context) {
 }
 
 function xmlHttpPost(url, params, callback, context) {
-  var httpRequest = createRequest(callback, context);
+  var httpRequest = createRequest(callback, context, params.f === 'text');
+  delete params.f;
+
   httpRequest.open('POST', url);
   httpRequest.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
   httpRequest.send(serialize(params));
@@ -644,7 +599,8 @@ function xmlHttpPost(url, params, callback, context) {
 }
 
 function xmlHttpGet(url, params, callback, context) {
-  var httpRequest = createRequest(callback, context);
+  var httpRequest = createRequest(callback, context, params.f === 'text');
+  delete params.f;
 
   httpRequest.open('GET', url + '?' + serialize(params), true);
   httpRequest.send(null);
@@ -655,28 +611,34 @@ function xmlHttpGet(url, params, callback, context) {
 // AJAX handlers for CORS (modern browsers) or JSONP (older browsers)
 
 function request(url, params, callback, context) {
+  var httpRequest = createRequest(callback, context, params.f === 'text');
+  delete params.f;
+
   var paramString = serialize(params);
-  var httpRequest = createRequest(callback, context);
   var requestLength = (url + '?' + paramString).length;
 
-  // request is less then 2000 characters and the browser supports CORS, make GET request with XMLHttpRequest
+  // request is less then 2000 characters and the browser supports CORS,
+  // make GET request with XMLHttpRequest
   if (requestLength <= 2000 && _Support2['default'].cors) {
     httpRequest.open('GET', url + '?' + paramString);
     httpRequest.send(null);
 
-    // request is less more then 2000 characters and the browser supports CORS, make POST request with XMLHttpRequest
+    // request is less more then 2000 characters and the browser supports CORS,
+    // make POST request with XMLHttpRequest
   } else if (requestLength > 2000 && _Support2['default'].cors) {
       httpRequest.open('POST', url);
       httpRequest.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
       httpRequest.send(paramString);
 
-      // request is less more then 2000 characters and the browser does not support CORS, make a JSONP request
+      // request is less more then 2000 characters and the browser does not
+      // support CORS, make a JSONP request
     } else if (requestLength <= 2000 && !_Support2['default'].cors) {
         return jsonp(url, params, callback, context);
 
-        // request is longer then 2000 characters and the browser does not support CORS, log a warning
+        // request is longer then 2000 characters and the browser does not
+        // support CORS, log a warning
       } else {
-          (0, _Util.warn)('a request to ' + url + ' was longer then 2000 characters and this browser cannot make a cross-domain post request. Please use a proxy http://esri.github.io/esri-leaflet/api-reference/request.html');
+          (0, _Util.warn)('a request to ' + url + ' was longer then 2000 characters and ' + 'this browser cannot make a cross-domain post request. Please use ' + 'a proxy http://esri.github.io/esri-leaflet/api-reference/request.html');
           return;
         }
 
@@ -684,7 +646,7 @@ function request(url, params, callback, context) {
 }
 
 function jsonp(url, params, callback, context) {
-  window._EsriLeafletCallbacks = window._EsriLeafletCallbacks || {};
+  global._OgcLeafletCallbacks = global._OgcLeafletCallbacks || {};
   var callbackId = 'c' + callbacks;
 
   params.callback = 'window._EsriLeafletCallbacks.' + callbackId;
@@ -694,9 +656,9 @@ function jsonp(url, params, callback, context) {
   script.src = url + '?' + serialize(params);
   script.id = callbackId;
 
-  window._EsriLeafletCallbacks[callbackId] = function (response) {
-    if (window._EsriLeafletCallbacks[callbackId] !== true) {
-      var error;
+  global._EsriLeafletCallbacks[callbackId] = function (response) {
+    if (global._EsriLeafletCallbacks[callbackId] !== true) {
+      var error = undefined;
       var responseType = Object.prototype.toString.call(response);
 
       if (!(responseType === '[object Object]' || responseType === '[object Array]')) {
@@ -715,7 +677,7 @@ function jsonp(url, params, callback, context) {
       }
 
       callback.call(context, error, response);
-      window._EsriLeafletCallbacks[callbackId] = true;
+      global._EsriLeafletCallbacks[callbackId] = true;
     }
   };
 
@@ -725,7 +687,7 @@ function jsonp(url, params, callback, context) {
     id: callbackId,
     url: script.src,
     abort: function abort() {
-      window._EsriLeafletCallbacks._callback[callbackId]({
+      global._EsriLeafletCallbacks._callback[callbackId]({
         code: 0,
         message: 'Request aborted.'
       });
@@ -751,7 +713,7 @@ exports.post = xmlHttpPost;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./Support":44,"./Util":51,"babel-runtime/helpers/interop-require-default":13,"leaflet":"leaflet"}],41:[function(require,module,exports){
+},{"./Support":43,"./Util":50,"babel-runtime/helpers/interop-require-default":13,"leaflet":"leaflet"}],40:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -927,7 +889,7 @@ exports['default'] = service;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Request":40,"../Support":44,"../Util":51,"babel-runtime/core-js/object/define-property":3,"babel-runtime/core-js/object/get-own-property-descriptor":4,"babel-runtime/core-js/object/get-own-property-names":5,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"leaflet":"leaflet"}],42:[function(require,module,exports){
+},{"../Request":39,"../Support":43,"../Util":50,"babel-runtime/core-js/object/define-property":3,"babel-runtime/core-js/object/get-own-property-descriptor":4,"babel-runtime/core-js/object/get-own-property-names":5,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"leaflet":"leaflet"}],41:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1002,7 +964,7 @@ function wfsService(options) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Tasks/DescribeFeatureType":45,"../Tasks/GetCapabilities":46,"../Tasks/GetFeature":47,"./Service":41,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],43:[function(require,module,exports){
+},{"../Tasks/DescribeFeatureType":44,"../Tasks/GetCapabilities":45,"../Tasks/GetFeature":46,"./Service":40,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],42:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1057,6 +1019,17 @@ var WMSService = (function (_Service) {
     }
 
     /**
+     * @param  {Function} callback
+     * @param  {*=}       context
+     * @return {GetCapabilites}
+     */
+  }, {
+    key: 'metadata',
+    value: function metadata(callback, context) {
+      return this.getCapabilities().run(callback, context);
+    }
+
+    /**
      * @return {OgcLeaflet.Tasks.GetCapabilities}
      */
   }, {
@@ -1100,7 +1073,7 @@ function wmsService(options) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Tasks/GetCapabilities":46,"../Tasks/GetFeatureInfo":48,"../Tasks/GetLegendGraphic":49,"./Service":41,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],44:[function(require,module,exports){
+},{"../Tasks/GetCapabilities":45,"../Tasks/GetFeatureInfo":47,"../Tasks/GetLegendGraphic":48,"./Service":40,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],43:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1119,7 +1092,7 @@ var Support = {
 exports.Support = Support;
 exports['default'] = Support;
 
-},{}],45:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1190,7 +1163,7 @@ function describeFeatureType(endpoint) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./Task":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],46:[function(require,module,exports){
+},{"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],45:[function(require,module,exports){
 'use strict';
 
 var _get = require('babel-runtime/helpers/get')['default'];
@@ -1226,7 +1199,8 @@ var GetCapabilities = (function (_Task) {
     _get(Object.getPrototypeOf(GetCapabilities.prototype), 'constructor', this).call(this, endpoint);
 
     L.Util.extend(this.params, {
-      request: 'GetCapabilities'
+      request: 'GetCapabilities',
+      f: 'text'
     });
 
     if (this._service) {
@@ -1244,8 +1218,23 @@ var GetCapabilities = (function (_Task) {
     value: function service() {
       var type = arguments.length <= 0 || arguments[0] === undefined ? 'WMS' : arguments[0];
 
-      this.params = type;
+      this.params.service = type;
       return this;
+    }
+
+    /**
+     * @param  {Function} callback
+     * @param  {*=}       context
+     * @return {GetCapabilites}
+     */
+  }, {
+    key: 'run',
+    value: function run(callback, context) {
+      return _get(Object.getPrototypeOf(GetCapabilities.prototype), 'request', this).call(this, function (error, text) {
+        // parse capabilities here
+        // if (!error) { text = this._parseCapabilities(text); }
+        callback.call(context, error, text);
+      }, context);
     }
   }]);
 
@@ -1258,7 +1247,7 @@ function getCapabilities(endpoint) {
   return new GetCapabilities(endpoint);
 }
 
-},{"./Task":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11}],47:[function(require,module,exports){
+},{"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11}],46:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1450,7 +1439,7 @@ function getFeature(endpoint) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Util":51,"./Task":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],48:[function(require,module,exports){
+},{"../Util":50,"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],47:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1471,11 +1460,14 @@ var _Task2 = require('./Task');
 
 var _Util = require('../Util');
 
+var L = global.L || require('leaflet');
+
+var DEFAULT_WMS_VERSION = 1.3;
+
 /**
  * @class ogc.Tasks.GetFeatureInfo
  * @extends {ogc.Tasks.Task}
  */
-var L = global.L || require('leaflet');
 
 var GetFeatureInfo = (function (_Task) {
   _inherits(GetFeatureInfo, _Task);
@@ -1490,26 +1482,78 @@ var GetFeatureInfo = (function (_Task) {
     _get(Object.getPrototypeOf(GetFeatureInfo.prototype), 'constructor', this).call(this, endpoint);
 
     L.Util.extend(this.params, {
+      service: 'WMS',
+      version: '1.3.0',
+      info_format: 'application/json',
       request: 'GetFeatureInfo',
-      exceptions: 'application/json',
-      srs: 'EPSG:4326',
+      crs: 'EPSG:4326',
       buffer: 0
     });
   }
 
   /**
-   * @param  {L.LatLng} latlng
+   * @param  {String} srs
    * @return {GetFeatureInfo}
    */
 
   _createClass(GetFeatureInfo, [{
+    key: 'srs',
+    value: function srs(_srs) {
+      this.params[parseFloat(this.params.version) >= DEFAULT_WMS_VERSION ? 'crs' : 'srs'] = _srs;
+      return this;
+    }
+  }, {
+    key: 'crs',
+    value: function crs(_crs) {
+      return this.srs(_crs);
+    }
+
+    /**
+     * @param  {L.Map} map
+     * @return {GetFeatureInfo}
+     */
+  }, {
+    key: 'on',
+    value: function on(map) {
+      _get(Object.getPrototypeOf(GetFeatureInfo.prototype), 'on', this).call(this, map);
+
+      this.size(map.getSize());
+      this.bbox(this._boundsToBBox(map.getBounds(), map.options.crs));
+      this.srs(map.options.crs.code);
+
+      return this;
+    }
+
+    /**
+     * @param  {L.LatLngBounds} bounds
+     * @param  {L.CRS}          crs
+     * @return {Array.<Number>}
+     */
+  }, {
+    key: '_boundsToBBox',
+    value: function _boundsToBBox(bounds, crs) {
+      var nw = crs.project(bounds.getNorthWest());
+      var se = crs.project(bounds.getSouthEast());
+
+      if (parseFloat(this.params.version) >= 1.3 && crs === L.CRS.EPSG4326) {
+        return [se.y, nw.x, nw.y, se.x];
+      } else {
+        return [nw.x, se.y, se.x, nw.y];
+      }
+    }
+
+    /**
+     * @param  {L.LatLng} latlng
+     * @return {GetFeatureInfo}
+     */
+  }, {
     key: 'at',
     value: function at(latlng) {
       var px = undefined;
       if (latlng instanceof L.LatLng) {
         if (this._map) {
           // project
-          px = this._map.lalLngToContainerPixel(latlng);
+          px = this._map.latLngToContainerPoint(latlng);
         } else {
           throw new Error('Cannot project latlng to map pixels');
         }
@@ -1548,7 +1592,7 @@ var GetFeatureInfo = (function (_Task) {
       if (L.Util.isArray(_layers)) {
         _layers = _layers.join(',');
       }
-      this.params.layers = _layers;
+      this.params.query_layers = this.params.layers = _layers;
       return this;
     }
 
@@ -1592,12 +1636,18 @@ var GetFeatureInfo = (function (_Task) {
 
     /**
      * @param  {L.LatLngBounds|L.Bounds} bounds
+     * @param  {L.Map=}                  map
      * @return {GetFeatureInfo}
      */
   }, {
     key: 'bounds',
-    value: function bounds(_bounds) {
-      return this.bbox((0, _Util.boundsToBBox)(_bounds));
+    value: function bounds(_bounds, map) {
+      map = map || this._map;
+      if (map) {
+        return this.bbox(this._boundsToBBox(_bounds, this._map.options.crs));
+      } else {
+        throw new Error('Cannot project bounds');
+      }
     }
 
     /**
@@ -1609,6 +1659,11 @@ var GetFeatureInfo = (function (_Task) {
     value: function bbox(_bbox) {
       this.params.bbox = _bbox.join(',');
       return this;
+    }
+  }, {
+    key: 'run',
+    value: function run(callback, context) {
+      return this.request(callback, context);
     }
   }]);
 
@@ -1623,7 +1678,7 @@ function getFeatureInfo(endpoint) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Util":51,"./Task":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],49:[function(require,module,exports){
+},{"../Util":50,"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],48:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1745,7 +1800,7 @@ function getLegendGraphic(endpoint) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./Task":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],50:[function(require,module,exports){
+},{"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],49:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1786,6 +1841,8 @@ var Task = (function () {
       proxy: false,
       useCors: _Support.cors
     };
+
+    this.path = '';
 
     // endpoint can be either a url (and options) for an
     // OGC Service or an instance of OgcLeaflet.Service
@@ -1830,6 +1887,11 @@ var Task = (function () {
       }
       return this;
     }
+
+    /**
+     * @param  {L.Map} map
+     * @return {ogc.Tasks.Task}
+     */
   }, {
     key: 'on',
     value: function on(map) {
@@ -1870,7 +1932,7 @@ exports['default'] = task;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Request":40,"../Support":44,"../Util":51,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/interop-require-default":13,"leaflet":"leaflet"}],51:[function(require,module,exports){
+},{"../Request":39,"../Support":43,"../Util":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/interop-require-default":13,"leaflet":"leaflet"}],50:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1901,7 +1963,7 @@ function ringIsClockwise(ringToTest) {
   var i = 0;
   var rLength = ringToTest.length;
   var pt1 = ringToTest[i];
-  var pt2;
+  var pt2 = undefined;
   for (i; i < rLength - 1; i++) {
     pt2 = ringToTest[i + 1];
     total += (pt2[0] - pt1[0]) * (pt2[1] + pt1[1]);
@@ -1949,7 +2011,7 @@ function boundsToBBox(bounds) {
 var Util = {
   shallowClone: shallowClone,
   cleanUrl: cleanUrl,
-  'boundsToBBox': boundsToBBox
+  boundsToBBox: boundsToBBox
 };
 
 exports.Util = Util;
@@ -1957,7 +2019,87 @@ exports['default'] = Util;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"leaflet":"leaflet"}]},{},[1])(1)
+},{"leaflet":"leaflet"}],51:[function(require,module,exports){
+(function (global){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+// import base
+
+var _Support = require('./Support');
+
+var _Util = require('./Util');
+
+var _Request = require('./Request');
+
+// import tasks
+
+var _TasksTask = require('./Tasks/Task');
+
+var _TasksGetFeature = require('./Tasks/GetFeature');
+
+var _TasksDescribeFeatureType = require('./Tasks/DescribeFeatureType');
+
+var _TasksGetLegendGraphic = require('./Tasks/GetLegendGraphic');
+
+//import { Find, find } from './Tasks/Find';
+//import { Identify, identify } from './Tasks/Identify';
+//import { IdentifyFeatures, identifyFeatures } from './Tasks/IdentifyFeatures';
+//import { IdentifyImage, identifyImage } from './Tasks/IdentifyImage';
+
+// import services
+
+var _ServicesService = require('./Services/Service');
+
+var _ServicesWFS = require('./Services/WFS');
+
+var _ServicesWMS = require('./Services/WMS');
+
+//import { ImageService, imageService } from './Services/ImageService';
+//import { FeatureLayerService, featureLayerService } from './Services/FeatureLayerService';
+
+// import layers
+
+var _LayersWMS = require('./Layers/WMS');
+
+//import { TiledMapLayer, tiledMapLayer } from './Layers/TiledMapLayer';
+//import { RasterLayer } from './Layers/RasterLayer';
+//import { ImageMapLayer, imageMapLayer } from './Layers/ImageMapLayer';
+//import { DynamicMapLayer, dynamicMapLayer } from './Layers/DynamicMapLayer';
+//import { FeatureGrid } from './Layers/FeatureLayer/FeatureGrid';
+//import { FeatureManager } from './Layers/FeatureLayer/FeatureManager';
+//import { FeatureLayer, featureLayer } from './Layers/FeatureLayer/FeatureLayer';
+
+var L = global.L || require('leaflet');L.ogc = {
+  Service: _ServicesService.Service, service: _ServicesService.service,
+  WFSService: _ServicesWFS.WFSService, wfsService: _ServicesWFS.wfsService,
+  WMSService: _ServicesWMS.WMSService, wmsService: _ServicesWMS.wmsService,
+  Task: _TasksTask.Task, task: _TasksTask.task,
+  Util: _Util.Util,
+  get: _Request.get, post: _Request.post, request: _Request.request,
+  Support: _Support.Support,
+
+  GetCapabilities: _TasksGetFeature.GetCapabilities, getCapabilities: _TasksGetFeature.getCapabilities,
+  GetLegendGraphic: _TasksGetLegendGraphic.GetLegendGraphic, getLegendGraphic: _TasksGetLegendGraphic.getLegendGraphic,
+  GetFeatureInfo: _TasksGetFeature.GetFeatureInfo, getFeatureInfo: _TasksGetFeature.getFeatureInfo,
+  GetFeature: _TasksGetFeature.GetFeature, getFeature: _TasksGetFeature.getFeature,
+  DescribeFeatureType: _TasksDescribeFeatureType.DescribeFeatureType, describeFeatureType: _TasksDescribeFeatureType.describeFeatureType,
+
+  WMS: _LayersWMS.WMS, wms: _LayersWMS.wms,
+
+  // aliases
+  DynamicMapLayer: _LayersWMS.WMS
+};
+
+exports['default'] = L.ogc;
+module.exports = exports['default'];
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{"./Layers/WMS":38,"./Request":39,"./Services/Service":40,"./Services/WFS":41,"./Services/WMS":42,"./Support":43,"./Tasks/DescribeFeatureType":44,"./Tasks/GetFeature":46,"./Tasks/GetLegendGraphic":48,"./Tasks/Task":49,"./Util":50,"leaflet":"leaflet"}]},{},[1])(1)
 });
 
 
