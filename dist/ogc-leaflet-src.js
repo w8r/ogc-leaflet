@@ -13,7 +13,7 @@ var _srcOgc = require('./src/ogc');
 
 _defaults(exports, _interopExportWildcard(_srcOgc, _defaults));
 
-},{"./src/ogc":51,"babel-runtime/helpers/defaults":9,"babel-runtime/helpers/interop-export-wildcard":12}],2:[function(require,module,exports){
+},{"./src/ogc":61,"babel-runtime/helpers/defaults":9,"babel-runtime/helpers/interop-export-wildcard":12}],2:[function(require,module,exports){
 module.exports = { "default": require("core-js/library/fn/object/create"), __esModule: true };
 },{"core-js/library/fn/object/create":14}],3:[function(require,module,exports){
 module.exports = { "default": require("core-js/library/fn/object/define-property"), __esModule: true };
@@ -414,6 +414,1390 @@ require('./$.object-sap')('getOwnPropertyNames', function(){
 var $def = require('./$.def');
 $def($def.S, 'Object', {setPrototypeOf: require('./$.set-proto').set});
 },{"./$.def":24,"./$.set-proto":33}],38:[function(require,module,exports){
+"use strict";
+
+module.exports = require('./src/wms');
+
+},{"./src/wms":43}],39:[function(require,module,exports){
+"use strict";
+
+/**
+ * @enum {Number}
+ */
+module.exports = {
+  ELEMENT: 1,
+  ATTRIBUTE: 2,
+  TEXT: 3,
+  CDATA_SECTION: 4,
+  ENTITY_REFERENCE: 5,
+  ENTITY: 6,
+  PROCESSING_INSTRUCTION: 7,
+  COMMENT: 8,
+  DOCUMENT: 9,
+  DOCUMENT_TYPE: 10,
+  DOCUMENT_FRAGMENT: 11,
+  NOTATION: 12
+};
+
+},{}],40:[function(require,module,exports){
+"use strict";
+
+/**
+ * Returns true if the specified value is not undefined.
+ *
+ * @param {?} val Variable to test.
+ * @return {Boolean} Whether variable is defined.
+ */
+module.exports = function isDef(val) {
+  return val !== void 0;
+};
+
+},{}],41:[function(require,module,exports){
+"use strict";
+
+/**
+ * Adds a key-value pair to the object/map/hash if it doesn't exist yet.
+ *
+ * @param {Object.<K,V>} obj The object to which to add the key-value pair.
+ * @param {String} key The key to add.
+ * @param {V} value The value to add if the key wasn't present.
+ * @return {V} The value of the entry at the end of the function.
+ * @template K,V
+ */
+module.exports = function(obj, key, value) {
+  return key in obj ? obj[key] : (obj[key] = value);
+};
+
+},{}],42:[function(require,module,exports){
+"use strict";
+
+var isDef = require('./isdef');
+
+/**
+ * Make sure we trim BOM and NBSP
+ * @type {RegExp}
+ */
+var TRIM_RE = /^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g;
+
+/**
+ * Repeats a string n times.
+ * @param {String} string The string to repeat.
+ * @param {Number} length The number of times to repeat.
+ * @return {String} A string containing {@code length} repetitions of
+ *     {@code string}.
+ */
+function repeat(string, length) {
+  return new Array(length + 1).join(string);
+}
+
+module.exports = {
+
+  /**
+   * @param  {String} str
+   * @return {String}
+   */
+  trim: function(str) {
+    return str.replace(TRIM_RE, '');
+  },
+
+  /**
+   * Pads number to given length and optionally rounds it to a given precision.
+   * For example:
+   * <pre>padNumber(1.25, 2, 3) -> '01.250'
+   * padNumber(1.25, 2) -> '01.25'
+   * padNumber(1.25, 2, 1) -> '01.3'
+   * padNumber(1.25, 0) -> '1.25'</pre>
+   *
+   * @param {Number} num The number to pad.
+   * @param {Number} length The desired length.
+   * @param {Number=} opt_precision The desired precision.
+   * @return {String} {@code num} as a string with the given options.
+   */
+  padNumber: function(num, length, opt_precision) {
+    var s = isDef(opt_precision) ? num.toFixed(opt_precision) : String(num);
+    var index = s.indexOf('.');
+    if (index == -1) {
+      index = s.length;
+    }
+    return repeat('0', Math.max(0, length - index)) + s;
+  }
+
+};
+
+},{"./isdef":40}],43:[function(require,module,exports){
+"use strict";
+
+var XMLParser = require('./xml_parser');
+var isDef = require('./utils/isdef');
+var nodeTypes = require('./node_types');
+var setIfUndefined = require('./utils/setifundefined');
+var XSD = require('./xsd');
+var XLink = require('./xlink');
+
+/**
+ * WMS Capabilities parser
+ *
+ * @param {String=} xmlString
+ * @constructor
+ */
+function WMS(xmlString) {
+
+  /**
+   * @type {String}
+   */
+  this.version = undefined;
+
+  /**
+   * @type {XMLParser}
+   */
+  this._parser = new XMLParser();
+
+  /**
+   * @type {String=}
+   */
+  this._data = xmlString;
+};
+
+/**
+ * Shortcut
+ * @type {Function}
+ */
+var makePropertySetter = XMLParser.makeObjectPropertySetter;
+
+/**
+ * @param {String} xmlString
+ * @return {WMS}
+ */
+WMS.prototype.data = function(xmlString) {
+  this._data = xmlString;
+  return this;
+};
+
+/**
+ * @param  {String=} xmlString
+ * @return {Object}
+ */
+WMS.prototype.toJSON = function(xmlString) {
+  xmlString = xmlString || this._data;
+  return this.parse(xmlString);
+};
+
+/**
+ * @return {String} xml
+ */
+WMS.prototype.parse = function(xmlString) {
+  return this._readFromDocument(this._parser.toDocument(xmlString));
+};
+
+/**
+ * @param  {Document} doc
+ * @return {Object}
+ */
+WMS.prototype._readFromDocument = function(doc) {
+  for (var node = doc.firstChild; node; node = node.nextSibling) {
+    if (node.nodeType == nodeTypes.ELEMENT) {
+      return this.readFromNode(node);
+    }
+  }
+  return null;
+};
+
+/**
+ * @param  {DOMNode} node
+ * @return {Object}
+ */
+WMS.prototype.readFromNode = function(node) {
+  this.version = node.getAttribute('version');
+  var wmsCapabilityObject = XMLParser.pushParseAndPop({
+    'version': this.version
+  }, WMS.PARSERS, node, []);
+
+  return wmsCapabilityObject || null;
+};
+
+/**
+ * @private
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @return {Object|undefined} Attribution object.
+ */
+WMS._readAttribution = function(node, objectStack) {
+  return XMLParser.pushParseAndPop({}, WMS.ATTRIBUTION_PARSERS, node, objectStack);
+};
+
+
+/**
+ * @private
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @return {Object} Bounding box object.
+ */
+WMS._readBoundingBox = function(node, objectStack) {
+  var readDecimalString = XSD.readDecimalString;
+  var extent = [
+    readDecimalString(node.getAttribute('minx')),
+    readDecimalString(node.getAttribute('miny')),
+    readDecimalString(node.getAttribute('maxx')),
+    readDecimalString(node.getAttribute('maxy'))
+  ];
+
+  var resolutions = [
+    readDecimalString(node.getAttribute('resx')),
+    readDecimalString(node.getAttribute('resy'))
+  ];
+
+  return {
+    'crs': node.getAttribute('CRS') || node.getAttribute('SRS'),
+    'extent': extent,
+    'res': resolutions
+  };
+};
+
+
+/**
+ * @private
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @return {ol.Extent|undefined} Bounding box object.
+ */
+WMS._readEXGeographicBoundingBox = function(node, objectStack) {
+  var geographicBoundingBox = XMLParser.pushParseAndPop({},
+    WMS.EX_GEOGRAPHIC_BOUNDING_BOX_PARSERS,
+    node, objectStack);
+  if (!isDef(geographicBoundingBox)) {
+    return undefined;
+  }
+
+  var westBoundLongitude = /** @type {number|undefined} */
+    (geographicBoundingBox['westBoundLongitude']);
+  var southBoundLatitude = /** @type {number|undefined} */
+    (geographicBoundingBox['southBoundLatitude']);
+  var eastBoundLongitude = /** @type {number|undefined} */
+    (geographicBoundingBox['eastBoundLongitude']);
+  var northBoundLatitude = /** @type {number|undefined} */
+    (geographicBoundingBox['northBoundLatitude']);
+
+  if (!isDef(westBoundLongitude) || !isDef(southBoundLatitude) ||
+    !isDef(eastBoundLongitude) || !isDef(northBoundLatitude)) {
+    return undefined;
+  }
+
+  return [
+    westBoundLongitude, southBoundLatitude,
+    eastBoundLongitude, northBoundLatitude
+  ];
+};
+
+
+/**
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @private
+ * @return {Object|undefined} Capability object.
+ */
+WMS._readCapability = function(node, objectStack) {
+  return XMLParser.pushParseAndPop({}, WMS.CAPABILITY_PARSERS, node, objectStack);
+};
+
+
+/**
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @private
+ * @return {Object|undefined} Service object.
+ */
+WMS._readService = function(node, objectStack) {
+  return XMLParser.pushParseAndPop({}, WMS.SERVICE_PARSERS, node, objectStack);
+};
+
+
+/**
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @private
+ * @return {Object|undefined} Contact information object.
+ */
+WMS._readContactInformation = function(node, objectStack) {
+  return XMLParser.pushParseAndPop({}, WMS.CONTACT_INFORMATION_PARSERS,
+    node, objectStack);
+};
+
+
+/**
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @private
+ * @return {Object|undefined} Contact person object.
+ */
+WMS._readContactPersonPrimary = function(node, objectStack) {
+  return XMLParser.pushParseAndPop({}, WMS.CONTACT_PERSON_PARSERS,
+    node, objectStack);
+};
+
+
+/**
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @private
+ * @return {Object|undefined} Contact address object.
+ */
+WMS._readContactAddress = function(node, objectStack) {
+  return XMLParser.pushParseAndPop({}, WMS.CONTACT_ADDRESS_PARSERS,
+    node, objectStack);
+};
+
+
+/**
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @private
+ * @return {Array.<string>|undefined} Format array.
+ */
+WMS._readException = function(node, objectStack) {
+  return XMLParser.pushParseAndPop(
+    [], WMS.EXCEPTION_PARSERS, node, objectStack);
+};
+
+
+/**
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @private
+ * @return {Object|undefined} Layer object.
+ */
+WMS._readCapabilityLayer = function(node, objectStack) {
+  return XMLParser.pushParseAndPop({}, WMS.LAYER_PARSERS, node, objectStack);
+};
+
+
+/**
+ * @private
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @return {Object|undefined} Layer object.
+ */
+WMS._readLayer = function(node, objectStack) {
+  var parentLayerObject = /**  @type {Object.<string,*>} */
+    (objectStack[objectStack.length - 1]);
+
+  var layerObject = /**  @type {Object.<string,*>} */
+    (XMLParser.pushParseAndPop({}, WMS.LAYER_PARSERS,
+      node, objectStack));
+
+  if (!isDef(layerObject)) {
+    return undefined;
+  }
+
+  var queryable = XSD.readBooleanString(node.getAttribute('queryable'));
+  if (!isDef(queryable)) {
+    queryable = parentLayerObject['queryable'];
+  }
+  layerObject['queryable'] = isDef(queryable) ? queryable : false;
+
+  var cascaded = XSD.readNonNegativeIntegerString(node.getAttribute('cascaded'));
+  if (!isDef(cascaded)) {
+    cascaded = parentLayerObject['cascaded'];
+  }
+  layerObject['cascaded'] = cascaded;
+
+  var opaque = XSD.readBooleanString(node.getAttribute('opaque'));
+  if (!isDef(opaque)) {
+    opaque = parentLayerObject['opaque'];
+  }
+  layerObject['opaque'] = isDef(opaque) ? opaque : false;
+
+  var noSubsets = XSD.readBooleanString(node.getAttribute('noSubsets'));
+  if (!isDef(noSubsets)) {
+    noSubsets = parentLayerObject['noSubsets'];
+  }
+  layerObject['noSubsets'] = isDef(noSubsets) ? noSubsets : false;
+
+  var fixedWidth = XSD.readDecimalString(node.getAttribute('fixedWidth'));
+  if (!isDef(fixedWidth)) {
+    fixedWidth = parentLayerObject['fixedWidth'];
+  }
+  layerObject['fixedWidth'] = fixedWidth;
+
+  var fixedHeight = XSD.readDecimalString(node.getAttribute('fixedHeight'));
+  if (!isDef(fixedHeight)) {
+    fixedHeight = parentLayerObject['fixedHeight'];
+  }
+  layerObject['fixedHeight'] = fixedHeight;
+
+  // See 7.2.4.8
+  var addKeys = ['Style', 'CRS', 'AuthorityURL'];
+  for (var i = 0, len = addKeys.length; i < len; i++) {
+    var key = addKeys[i];
+    var parentValue = parentLayerObject[key];
+    if (isDef(parentValue)) {
+      var childValue = setIfUndefined(layerObject, key, []);
+      childValue = childValue.concat(parentValue);
+      layerObject[key] = childValue;
+    }
+  }
+
+  var replaceKeys = ['EX_GeographicBoundingBox', 'BoundingBox', 'Dimension',
+    'Attribution', 'MinScaleDenominator', 'MaxScaleDenominator'
+  ];
+  for (var i = 0, len = replaceKeys.length; i < len; i++) {
+    var key = replaceKeys[i];
+    var childValue = layerObject[key];
+    if (!isDef(childValue)) {
+      var parentValue = parentLayerObject[key];
+      layerObject[key] = parentValue;
+    }
+  }
+
+  return layerObject;
+};
+
+
+/**
+ * @private
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @return {Object} Dimension object.
+ */
+WMS._readDimension = function(node, objectStack) {
+  var dimensionObject = {
+    'name': node.getAttribute('name'),
+    'units': node.getAttribute('units'),
+    'unitSymbol': node.getAttribute('unitSymbol'),
+    'default': node.getAttribute('default'),
+    'multipleValues': XSD.readBooleanString(node.getAttribute('multipleValues')),
+    'nearestValue': XSD.readBooleanString(node.getAttribute('nearestValue')),
+    'current': XSD.readBooleanString(node.getAttribute('current')),
+    'values': XSD.readString(node)
+  };
+  return dimensionObject;
+};
+
+
+/**
+ * @private
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @return {Object|undefined} Online resource object.
+ */
+WMS._readFormatOnlineresource = function(node, objectStack) {
+  return XMLParser.pushParseAndPop({}, WMS.FORMAT_ONLINERESOURCE_PARSERS,
+    node, objectStack);
+};
+
+
+/**
+ * @private
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @return {Object|undefined} Request object.
+ */
+WMS._readRequest = function(node, objectStack) {
+  return XMLParser.pushParseAndPop({}, WMS.REQUEST_PARSERS, node, objectStack);
+};
+
+
+/**
+ * @private
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @return {Object|undefined} DCP type object.
+ */
+WMS._readDCPType = function(node, objectStack) {
+  return XMLParser.pushParseAndPop({}, WMS.DCPTYPE_PARSERS, node, objectStack);
+};
+
+
+/**
+ * @private
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @return {Object|undefined} HTTP object.
+ */
+WMS._readHTTP = function(node, objectStack) {
+  return XMLParser.pushParseAndPop({}, WMS.HTTP_PARSERS, node, objectStack);
+};
+
+
+/**
+ * @private
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @return {Object|undefined} Operation type object.
+ */
+WMS._readOperationType = function(node, objectStack) {
+  return XMLParser.pushParseAndPop({}, WMS.OPERATIONTYPE_PARSERS, node, objectStack);
+};
+
+
+/**
+ * @private
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @return {Object|undefined} Online resource object.
+ */
+WMS._readSizedFormatOnlineresource = function(node, objectStack) {
+  var formatOnlineresource = WMS._readFormatOnlineresource(node, objectStack);
+  if (isDef(formatOnlineresource)) {
+    var readNonNegativeIntegerString = XSD.readNonNegativeIntegerString;
+    var size = [
+      readNonNegativeIntegerString(node.getAttribute('width')),
+      readNonNegativeIntegerString(node.getAttribute('height'))
+    ];
+    formatOnlineresource['size'] = size;
+    return formatOnlineresource;
+  }
+  return undefined;
+};
+
+
+/**
+ * @private
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @return {Object|undefined} Authority URL object.
+ */
+WMS._readAuthorityURL = function(node, objectStack) {
+  var authorityObject = WMS._readFormatOnlineresource(node, objectStack);
+  if (isDef(authorityObject)) {
+    authorityObject['name'] = node.getAttribute('name');
+    return authorityObject;
+  }
+  return undefined;
+};
+
+
+/**
+ * @private
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @return {Object|undefined} Metadata URL object.
+ */
+WMS._readMetadataURL = function(node, objectStack) {
+  var metadataObject = WMS._readFormatOnlineresource(node, objectStack);
+  if (isDef(metadataObject)) {
+    metadataObject['type'] = node.getAttribute('type');
+    return metadataObject;
+  }
+  return undefined;
+};
+
+
+/**
+ * @private
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @return {Object|undefined} Style object.
+ */
+WMS._readStyle = function(node, objectStack) {
+  return XMLParser.pushParseAndPop({}, WMS.STYLE_PARSERS, node, objectStack);
+};
+
+
+/**
+ * @private
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @return {Array.<string>|undefined} Keyword list.
+ */
+WMS._readKeywordList = function(node, objectStack) {
+  return XMLParser.pushParseAndPop(
+    [], WMS.KEYWORDLIST_PARSERS, node, objectStack);
+};
+
+/**
+ * @const
+ * @type {Array.<string>}
+ */
+WMS.NAMESPACE_URIS = [
+  null,
+  'http://www.opengis.net/wms'
+];
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'Service': makePropertySetter(WMS._readService),
+    'Capability': makePropertySetter(WMS._readCapability)
+  });
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.CAPABILITY_PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'Request': makePropertySetter(WMS._readRequest),
+    'Exception': makePropertySetter(WMS._readException),
+    'Layer': makePropertySetter(WMS._readCapabilityLayer)
+  });
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.SERVICE_PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'Name': makePropertySetter(XSD.readString),
+    'Title': makePropertySetter(XSD.readString),
+    'Abstract': makePropertySetter(XSD.readString),
+    'KeywordList': makePropertySetter(WMS._readKeywordList),
+    'OnlineResource': makePropertySetter(XLink.readHref),
+    'ContactInformation': makePropertySetter(WMS._readContactInformation),
+    'Fees': makePropertySetter(XSD.readString),
+    'AccessConstraints': makePropertySetter(XSD.readString),
+    'LayerLimit': makePropertySetter(XSD.readNonNegativeInteger),
+    'MaxWidth': makePropertySetter(XSD.readNonNegativeInteger),
+    'MaxHeight': makePropertySetter(XSD.readNonNegativeInteger)
+  });
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.CONTACT_INFORMATION_PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'ContactPersonPrimary': makePropertySetter(WMS._readContactPersonPrimary),
+    'ContactPosition': makePropertySetter(XSD.readString),
+    'ContactAddress': makePropertySetter(WMS._readContactAddress),
+    'ContactVoiceTelephone': makePropertySetter(XSD.readString),
+    'ContactFacsimileTelephone': makePropertySetter(XSD.readString),
+    'ContactElectronicMailAddress': makePropertySetter(XSD.readString)
+  });
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.CONTACT_PERSON_PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'ContactPerson': makePropertySetter(XSD.readString),
+    'ContactOrganization': makePropertySetter(XSD.readString)
+  });
+
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.CONTACT_ADDRESS_PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'AddressType': makePropertySetter(XSD.readString),
+    'Address': makePropertySetter(XSD.readString),
+    'City': makePropertySetter(XSD.readString),
+    'StateOrProvince': makePropertySetter(XSD.readString),
+    'PostCode': makePropertySetter(XSD.readString),
+    'Country': makePropertySetter(XSD.readString)
+  });
+
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.EXCEPTION_PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'Format': XMLParser.makeArrayPusher(XSD.readString)
+  });
+
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.LAYER_PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'Name': makePropertySetter(XSD.readString),
+    'Title': makePropertySetter(XSD.readString),
+    'Abstract': makePropertySetter(XSD.readString),
+    'KeywordList': makePropertySetter(WMS._readKeywordList),
+    'CRS': XMLParser.makeObjectPropertyPusher(XSD.readString),
+    'EX_GeographicBoundingBox': makePropertySetter(WMS._readEXGeographicBoundingBox),
+    'BoundingBox': XMLParser.makeObjectPropertyPusher(WMS._readBoundingBox),
+    'Dimension': XMLParser.makeObjectPropertyPusher(WMS._readDimension),
+    'Attribution': makePropertySetter(WMS._readAttribution),
+    'AuthorityURL': XMLParser.makeObjectPropertyPusher(WMS._readAuthorityURL),
+    'Identifier': XMLParser.makeObjectPropertyPusher(XSD.readString),
+    'MetadataURL': XMLParser.makeObjectPropertyPusher(WMS._readMetadataURL),
+    'DataURL': XMLParser.makeObjectPropertyPusher(WMS._readFormatOnlineresource),
+    'FeatureListURL': XMLParser.makeObjectPropertyPusher(WMS._readFormatOnlineresource),
+    'Style': XMLParser.makeObjectPropertyPusher(WMS._readStyle),
+    'MinScaleDenominator': makePropertySetter(XSD.readDecimal),
+    'MaxScaleDenominator': makePropertySetter(XSD.readDecimal),
+    'Layer': XMLParser.makeObjectPropertyPusher(WMS._readLayer)
+  });
+
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.ATTRIBUTION_PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'Title': makePropertySetter(XSD.readString),
+    'OnlineResource': makePropertySetter(XLink.readHref),
+    'LogoURL': makePropertySetter(WMS._readSizedFormatOnlineresource)
+  });
+
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.EX_GEOGRAPHIC_BOUNDING_BOX_PARSERS =
+  XMLParser.makeParsersNS(WMS.NAMESPACE_URIS, {
+    'westBoundLongitude': makePropertySetter(
+      XSD.readDecimal),
+    'eastBoundLongitude': makePropertySetter(
+      XSD.readDecimal),
+    'southBoundLatitude': makePropertySetter(
+      XSD.readDecimal),
+    'northBoundLatitude': makePropertySetter(
+      XSD.readDecimal)
+  });
+
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.REQUEST_PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'GetCapabilities': makePropertySetter(
+      WMS._readOperationType),
+    'GetMap': makePropertySetter(
+      WMS._readOperationType),
+    'GetFeatureInfo': makePropertySetter(
+      WMS._readOperationType)
+  });
+
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.OPERATIONTYPE_PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'Format': XMLParser.makeObjectPropertyPusher(XSD.readString),
+    'DCPType': XMLParser.makeObjectPropertyPusher(
+      WMS._readDCPType)
+  });
+
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.DCPTYPE_PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'HTTP': makePropertySetter(
+      WMS._readHTTP)
+  });
+
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.HTTP_PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'Get': makePropertySetter(
+      WMS._readFormatOnlineresource),
+    'Post': makePropertySetter(
+      WMS._readFormatOnlineresource)
+  });
+
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.STYLE_PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'Name': makePropertySetter(XSD.readString),
+    'Title': makePropertySetter(XSD.readString),
+    'Abstract': makePropertySetter(XSD.readString),
+    'LegendURL': XMLParser.makeObjectPropertyPusher(WMS._readSizedFormatOnlineresource),
+    'StyleSheetURL': makePropertySetter(WMS._readFormatOnlineresource),
+    'StyleURL': makePropertySetter(WMS._readFormatOnlineresource)
+  });
+
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.FORMAT_ONLINERESOURCE_PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'Format': makePropertySetter(XSD.readString),
+    'OnlineResource': makePropertySetter(XLink.readHref)
+  });
+
+
+/**
+ * @const
+ * @type {Object.<string, Object.<string, XMLParser.Parser>>}
+ * @private
+ */
+WMS.KEYWORDLIST_PARSERS = XMLParser.makeParsersNS(
+  WMS.NAMESPACE_URIS, {
+    'Keyword': XMLParser.makeArrayPusher(XSD.readString)
+  });
+
+module.exports = WMS;
+
+},{"./node_types":39,"./utils/isdef":40,"./utils/setifundefined":41,"./xlink":44,"./xml_parser":45,"./xsd":46}],44:[function(require,module,exports){
+"use strict";
+
+/**
+ * @const
+ * @type {string}
+ */
+var NAMESPACE_URI = 'http://www.w3.org/1999/xlink';
+
+module.exports = {
+
+  /**
+   * @param {Node} node Node.
+   * @return {Boolean|undefined} Boolean.
+   */
+  readHref: function(node) {
+    return node.getAttributeNS(NAMESPACE_URI, 'href');
+  }
+};
+
+},{}],45:[function(require,module,exports){
+"use strict";
+
+var isDef = require('./utils/isdef');
+var setIfUndefined = require('./utils/setifundefined');
+var nodeTypes = require('./node_types');
+
+/**
+ * XML DOM parser
+ * @constructor
+ */
+function XMLParser() {
+
+  /**
+   * @type {DOMParser}
+   */
+  this._parser = new DOMParser();
+};
+
+/**
+ * @param  {String} xmlstring
+ * @return {Document}
+ */
+XMLParser.prototype.toDocument = function(xmlstring) {
+  return this._parser.parseFromString(xmlstring, 'application/xml');
+};
+
+/**
+ * Recursively grab all text content of child nodes into a single string.
+ * @param {Node} node Node.
+ * @param {boolean} normalizeWhitespace Normalize whitespace: remove all line
+ * breaks.
+ * @return {string} All text content.
+ * @api
+ */
+XMLParser.getAllTextContent = function(node, normalizeWhitespace) {
+  return XMLParser.getAllTextContent_(node, normalizeWhitespace, []).join('');
+};
+
+
+/**
+ * @param {Node} node Node.
+ * @param {boolean} normalizeWhitespace Normalize whitespace: remove all line
+ * breaks.
+ * @param {Array.<String|string>} accumulator Accumulator.
+ * @private
+ * @return {Array.<String|string>} Accumulator.
+ */
+XMLParser.getAllTextContent_ = function(node, normalizeWhitespace, accumulator) {
+  if (node.nodeType === nodeTypes.CDATA_SECTION ||
+    node.nodeType === nodeTypes.TEXT) {
+    if (normalizeWhitespace) {
+      // FIXME understand why goog.dom.getTextContent_ uses String here
+      accumulator.push(String(node.nodeValue).replace(/(\r\n|\r|\n)/g, ''));
+    } else {
+      accumulator.push(node.nodeValue);
+    }
+  } else {
+    var n;
+    for (n = node.firstChild; n; n = n.nextSibling) {
+      XMLParser.getAllTextContent_(n, normalizeWhitespace, accumulator);
+    }
+  }
+  return accumulator;
+};
+
+/**
+ * @param {Object.<string, Object.<string, XMLParser.Parser>>} parsersNS
+ *     Parsers by namespace.
+ * @param {Node} node Node.
+ * @param {Array.<*>} objectStack Object stack.
+ * @param {*=} bind The object to use as `this`.
+ */
+XMLParser.parseNode = function(parsersNS, node, objectStack, bind) {
+  for (var n = XMLParser.firstElementChild(node); n; n = XMLParser.nextElementSibling(n)) {
+    var namespaceURI = n.namespaceURI || null;
+    var parsers = parsersNS[namespaceURI];
+    if (isDef(parsers)) {
+      var parser = parsers[n.localName];
+      if (isDef(parser)) {
+        parser.call(bind, n, objectStack);
+      }
+    }
+  }
+};
+
+/**
+ * Mostly for node.js
+ * @param  {Node} node
+ * @return {Node}
+ */
+XMLParser.firstElementChild = function(node) {
+  var firstElementChild = node.firstElementChild || node.firstChild;
+  while (firstElementChild && firstElementChild.nodeType !== nodeTypes.ELEMENT) {
+    firstElementChild = firstElementChild.nextSibling;
+  }
+  return firstElementChild;
+};
+
+/**
+ * Mostly for node.js
+ * @param  {Node} node
+ * @return {Node}
+ */
+XMLParser.nextElementSibling = function(node) {
+  var nextElementSibling = node.nextElementSibling || node.nextSibling;
+  while (nextElementSibling && nextElementSibling.nodeType !== nodeTypes.ELEMENT) {
+    nextElementSibling = nextElementSibling.nextSibling;
+  }
+  return nextElementSibling;
+};
+
+/**
+ * @param {Array.<string>} namespaceURIs Namespace URIs.
+ * @param {Object.<string, XMLParser.Parser>} parsers Parsers.
+ * @param {Object.<string, Object.<string, XMLParser.Parser>>=} opt_parsersNS
+ *     ParsersNS.
+ * @return {Object.<string, Object.<string, XMLParser.Parser>>} Parsers NS.
+ */
+XMLParser.makeParsersNS = function(namespaceURIs, parsers, opt_parsersNS) {
+  return /** @type {Object.<string, Object.<string, XMLParser.Parser>>} */ (
+    XMLParser.makeStructureNS(namespaceURIs, parsers, opt_parsersNS));
+};
+
+/**
+ * Creates a namespaced structure, using the same values for each namespace.
+ * This can be used as a starting point for versioned parsers, when only a few
+ * values are version specific.
+ * @param {Array.<string>} namespaceURIs Namespace URIs.
+ * @param {T} structure Structure.
+ * @param {Object.<string, T>=} opt_structureNS Namespaced structure to add to.
+ * @return {Object.<string, T>} Namespaced structure.
+ * @template T
+ */
+XMLParser.makeStructureNS = function(namespaceURIs, structure, opt_structureNS) {
+  /**
+   * @type {Object.<string, *>}
+   */
+  var structureNS = isDef(opt_structureNS) ? opt_structureNS : {};
+  var i, ii;
+  for (i = 0, ii = namespaceURIs.length; i < ii; ++i) {
+    structureNS[namespaceURIs[i]] = structure;
+  }
+  return structureNS;
+};
+
+/**
+ * @param {function(this: T, Node, Array.<*>): *} valueReader Value reader.
+ * @param {string=} opt_property Property.
+ * @param {T=} opt_this The object to use as `this` in `valueReader`.
+ * @return {XMLParser.Parser} Parser.
+ * @template T
+ */
+XMLParser.makeObjectPropertySetter = function(valueReader, opt_property, opt_this) {
+  return (
+    /**
+     * @param {Node} node Node.
+     * @param {Array.<*>} objectStack Object stack.
+     */
+    function(node, objectStack) {
+      var value = valueReader.call(isDef(opt_this) ? opt_this : this,
+        node, objectStack);
+      if (isDef(value)) {
+        var object = /** @type {Object} */ (objectStack[objectStack.length - 1]);
+        var property = isDef(opt_property) ? opt_property : node.localName;
+        object[property] = value;
+      }
+    });
+};
+
+/**
+ * @param {function(this: T, Node, Array.<*>): *} valueReader Value reader.
+ * @param {string=} opt_property Property.
+ * @param {T=} opt_this The object to use as `this` in `valueReader`.
+ * @return {Function} Parser.
+ * @template T
+ */
+XMLParser.makeObjectPropertyPusher = function(valueReader, opt_property, opt_this) {
+  return (
+    /**
+     * @param {Node} node Node.
+     * @param {Array.<*>} objectStack Object stack.
+     */
+    function(node, objectStack) {
+      var value = valueReader.call(isDef(opt_this) ? opt_this : this,
+        node, objectStack);
+
+      if (isDef(value)) {
+        var object = /** @type {Object} */ (objectStack[objectStack.length - 1]);
+        var property = isDef(opt_property) ? opt_property : node.localName;
+        var array = setIfUndefined(object, property, []);
+        array.push(value);
+      }
+    });
+};
+
+/**
+ * @param {function(this: T, Node, Array.<*>): *} valueReader Value reader.
+ * @param {T=} opt_this The object to use as `this` in `valueReader`.
+ * @return {Function} Parser.
+ * @template T
+ */
+XMLParser.makeArrayPusher = function(valueReader, opt_this) {
+  return (
+    /**
+     * @param {Node} node Node.
+     * @param {Array.<*>} objectStack Object stack.
+     */
+    function(node, objectStack) {
+      var value = valueReader.call(isDef(opt_this) ? opt_this : this,
+        node, objectStack);
+      if (isDef(value)) {
+        var array = objectStack[objectStack.length - 1];
+        array.push(value);
+      }
+    });
+};
+
+/**
+ * @param {Object}                                     object Object.
+ * @param {Object.<String, Object.<String, Function>>} parsersNS Parsers by namespace.
+ * @param {Node}                                       node Node.
+ * @param {Array.<*>}                                  objectStack Object stack.
+ * @param {*=}                                         bind The object to use as `this`.
+ * @return {Object|undefined} Object.
+ */
+XMLParser.pushParseAndPop = function(object, parsersNS, node, objectStack, bind) {
+  objectStack.push(object);
+  XMLParser.parseNode(parsersNS, node, objectStack, bind);
+  return objectStack.pop();
+};
+
+module.exports = XMLParser;
+
+},{"./node_types":39,"./utils/isdef":40,"./utils/setifundefined":41}],46:[function(require,module,exports){
+"use strict";
+
+var isDef = require('./utils/isdef');
+var string = require('./utils/string');
+var XMLParser = require('./xml_parser');
+
+var XSD = {};
+
+/**
+ * @const
+ * @type {string}
+ */
+XSD.NAMESPACE_URI = 'http://www.w3.org/2001/XMLSchema';
+
+/**
+ * @param {Node} node Node.
+ * @return {boolean|undefined} Boolean.
+ */
+XSD.readBoolean = function(node) {
+  var s = XMLParser.getAllTextContent(node, false);
+  return XSD.readBooleanString(s);
+};
+
+/**
+ * @param {string} string String.
+ * @return {boolean|undefined} Boolean.
+ */
+XSD.readBooleanString = function(string) {
+  var m = /^\s*(true|1)|(false|0)\s*$/.exec(string);
+  if (m) {
+    return isDef(m[1]) || false;
+  } else {
+    return undefined;
+  }
+};
+
+
+/**
+ * @param {Node} node Node.
+ * @return {number|undefined} DateTime in seconds.
+ */
+XSD.readDateTime = function(node) {
+  var s = XMLParser.getAllTextContent(node, false);
+  var re = /^\s*(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(Z|(?:([+\-])(\d{2})(?::(\d{2}))?))\s*$/;
+  var m = re.exec(s);
+  if (m) {
+    var year = parseInt(m[1], 10);
+    var month = parseInt(m[2], 10) - 1;
+    var day = parseInt(m[3], 10);
+    var hour = parseInt(m[4], 10);
+    var minute = parseInt(m[5], 10);
+    var second = parseInt(m[6], 10);
+    var dateTime = Date.UTC(year, month, day, hour, minute, second) / 1000;
+    if (m[7] != 'Z') {
+      var sign = m[8] == '-' ? -1 : 1;
+      dateTime += sign * 60 * parseInt(m[9], 10);
+      if (isDef(m[10])) {
+        dateTime += sign * 60 * 60 * parseInt(m[10], 10);
+      }
+    }
+    return dateTime;
+  } else {
+    return undefined;
+  }
+};
+
+
+/**
+ * @param {Node} node Node.
+ * @return {number|undefined} Decimal.
+ */
+XSD.readDecimal = function(node) {
+  var s = XMLParser.getAllTextContent(node, false);
+  return XSD.readDecimalString(s);
+};
+
+
+/**
+ * @param {string} string String.
+ * @return {number|undefined} Decimal.
+ */
+XSD.readDecimalString = function(string) {
+  // FIXME check spec
+  var m = /^\s*([+\-]?\d*\.?\d+(?:e[+\-]?\d+)?)\s*$/i.exec(string);
+  if (m) {
+    return parseFloat(m[1]);
+  } else {
+    return undefined;
+  }
+};
+
+
+/**
+ * @param {Node} node Node.
+ * @return {number|undefined} Non negative integer.
+ */
+XSD.readNonNegativeInteger = function(node) {
+  var s = XMLParser.getAllTextContent(node, false);
+  return XSD.readNonNegativeIntegerString(s);
+};
+
+
+/**
+ * @param {string} string String.
+ * @return {number|undefined} Non negative integer.
+ */
+XSD.readNonNegativeIntegerString = function(string) {
+  var m = /^\s*(\d+)\s*$/.exec(string);
+  if (m) {
+    return parseInt(m[1], 10);
+  } else {
+    return undefined;
+  }
+};
+
+
+/**
+ * @param {Node} node Node.
+ * @return {string|undefined} String.
+ */
+XSD.readString = function(node) {
+  var s = XMLParser.getAllTextContent(node, false);
+  return string.trim(s);
+};
+
+
+/**
+ * @param {Node} node Node to append a TextNode with the boolean to.
+ * @param {boolean} bool Boolean.
+ */
+XSD.writeBooleanTextNode = function(node, bool) {
+  XSD.writeStringTextNode(node, (bool) ? '1' : '0');
+};
+
+
+/**
+ * @param {Node} node Node to append a TextNode with the dateTime to.
+ * @param {number} dateTime DateTime in seconds.
+ */
+XSD.writeDateTimeTextNode = function(node, dateTime) {
+  var date = new Date(dateTime * 1000);
+  var string = date.getUTCFullYear() + '-' +
+    string.padNumber(date.getUTCMonth() + 1, 2) + '-' +
+    string.padNumber(date.getUTCDate(), 2) + 'T' +
+    string.padNumber(date.getUTCHours(), 2) + ':' +
+    string.padNumber(date.getUTCMinutes(), 2) + ':' +
+    string.padNumber(date.getUTCSeconds(), 2) + 'Z';
+  node.appendChild(XMLParser.DOCUMENT.createTextNode(string));
+};
+
+
+/**
+ * @param {Node} node Node to append a TextNode with the decimal to.
+ * @param {number} decimal Decimal.
+ */
+XSD.writeDecimalTextNode = function(node, decimal) {
+  var string = decimal.toPrecision();
+  node.appendChild(XMLParser.DOCUMENT.createTextNode(string));
+};
+
+
+/**
+ * @param {Node} node Node to append a TextNode with the decimal to.
+ * @param {number} nonNegativeInteger Non negative integer.
+ */
+XSD.writeNonNegativeIntegerTextNode = function(node, nonNegativeInteger) {
+  var string = nonNegativeInteger.toString();
+  node.appendChild(XMLParser.DOCUMENT.createTextNode(string));
+};
+
+
+/**
+ * @param {Node} node Node to append a TextNode with the string to.
+ * @param {string} string String.
+ */
+XSD.writeStringTextNode = function(node, string) {
+  node.appendChild(XMLParser.DOCUMENT.createTextNode(string));
+};
+
+module.exports = XSD;
+
+},{"./utils/isdef":40,"./utils/string":42,"./xml_parser":45}],47:[function(require,module,exports){
+(function (global){
+'use strict';
+
+var _get = require('babel-runtime/helpers/get')['default'];
+
+var _inherits = require('babel-runtime/helpers/inherits')['default'];
+
+var _createClass = require('babel-runtime/helpers/create-class')['default'];
+
+var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+exports.legend = legend;
+
+var _Util = require('../Util');
+
+var L = global.L || require('leaflet');
+
+var Legend = (function (_L$Control) {
+  _inherits(Legend, _L$Control);
+
+  function Legend(layers, options) {
+    _classCallCheck(this, Legend);
+
+    _get(Object.getPrototypeOf(Legend.prototype), 'constructor', this).call(this, L.Util.extend({}, {}, options));
+    this._layers = L.Util.isArray(layers) ? layers : [layers];
+  }
+
+  _createClass(Legend, [{
+    key: 'onAdd',
+    value: function onAdd(map) {
+      var container = this.options.container || L.DomUtil.create('div', 'leaflet-legend-control leaflet-bar');
+
+      L.DomEvent.disableScrollPropagation(container).disableClickPropagation(container);
+
+      if (this._layers.length) {
+        this._load();
+      }
+      return container;
+    }
+
+    /**
+     * Load legends for all included layers
+     */
+  }, {
+    key: '_load',
+    value: function _load() {
+      (0, _Util.reduce)(this._layers, {
+        layers: []
+      }, function (curr, layer, cb) {
+        layer.legend(function (err, legend) {
+          if (err) return cb(err, curr);
+          curr.layers = curr.layers.concat(legend.layers);
+          cb(null, curr);
+        });
+      }, this._onLoad, this);
+    }
+
+    /**
+     * @param  {Object|Null} error
+     * @param  {Object}     legend
+     */
+  }, {
+    key: '_onLoad',
+    value: function _onLoad(error, legend) {
+      if (!error) {
+        console.log(legend);
+        return;
+        var layersHtml = '';
+        for (var i = 0, len = legend.layers.length; i < len; i++) {
+          var layer = legend.layers[i];
+          layersHtml += L.Util.template(this.options.layerTemplate, {
+            layerName: layer.layerName,
+            legends: legendsHtml
+          });
+        }
+        this._container.innerHTML = L.Util.template(this.options.listTemplate, {
+          layers: layersHtml
+        });
+      }
+    }
+  }]);
+
+  return Legend;
+})(L.Control);
+
+exports.Legend = Legend;
+
+function legend(options) {
+  return new Legend(options);
+}
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{"../Util":60,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],48:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -432,10 +1816,19 @@ exports.wms = wms;
 
 var _ServicesWMS = require('../Services/WMS');
 
+/**
+ * @class ogc.Layers.WMS
+ * @extends {L.TileLayer.WMS}
+ */
 var L = global.L || require('leaflet');
 
 var WMS = (function (_L$TileLayer$WMS) {
   _inherits(WMS, _L$TileLayer$WMS);
+
+  /**
+   * @param  {String}  url
+   * @param  {Object=} options
+   */
 
   function WMS(url) {
     var options = arguments.length <= 1 || arguments[1] === undefined ? L.TileLayer.WMS.prototype.options : arguments[1];
@@ -469,6 +1862,35 @@ var WMS = (function (_L$TileLayer$WMS) {
     value: function metadata(callback, context) {
       return this.service.metadata(callback, context);
     }
+
+    /**
+     * Shorthand for legend info
+     * @param  {Function} callback
+     * @param  {*=}       context
+     * @return {ogc.Tasks.GetLegendGraphic}
+     */
+  }, {
+    key: 'legend',
+    value: function legend(callback, context) {
+      var legend = this.service.legend();
+      if (callback) {
+        return legend.run(callback, context);
+      } else {
+        return legend;
+      }
+    }
+
+    /**
+     * Unparsed XML
+     * @param  {Function} callback
+     * @param  {*=}       context
+     * @return {Request}
+     */
+  }, {
+    key: 'getCapabilities',
+    value: function getCapabilities(callback, context) {
+      return this.service.getCapabilities().request(callback, context);
+    }
   }]);
 
   return WMS;
@@ -482,7 +1904,7 @@ function wms(url, options) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Services/WMS":42,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],39:[function(require,module,exports){
+},{"../Services/WMS":52,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],49:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -491,6 +1913,7 @@ var _interopRequireDefault = require('babel-runtime/helpers/interop-require-defa
 Object.defineProperty(exports, '__esModule', {
   value: true
 });
+exports.serialize = serialize;
 exports.request = request;
 exports.jsonp = jsonp;
 
@@ -503,6 +1926,11 @@ var _Util = require('./Util');
 var L = global.L || require('leaflet');
 
 var callbacks = 0;
+
+/**
+ * @param  {Object} params
+ * @return {String}
+ */
 
 function serialize(params) {
   var data = '';
@@ -536,6 +1964,12 @@ function serialize(params) {
   return data;
 }
 
+/**
+ * @param  {Function} callback
+ * @param  {*=}       context
+ * @param  {Boolean=} text
+ * @return {XMLHttpRequest}
+ */
 function createRequest(callback, context) {
   var text = arguments.length <= 2 || arguments[2] === undefined ? false : arguments[2];
 
@@ -587,6 +2021,13 @@ function createRequest(callback, context) {
   return httpRequest;
 }
 
+/**
+ * @param  {String}   url
+ * @param  {Object}   params
+ * @param  {Function} callback
+ * @param  {*=}       context
+ * @return {XMLHttpRequest}
+ */
 function xmlHttpPost(url, params, callback, context) {
   var httpRequest = createRequest(callback, context, params.f === 'text');
   delete params.f;
@@ -598,6 +2039,13 @@ function xmlHttpPost(url, params, callback, context) {
   return httpRequest;
 }
 
+/**
+ * @param  {String}   url
+ * @param  {Object}   params
+ * @param  {Function} callback
+ * @param  {*=}       context
+ * @return {XMLHttpRequest}
+ */
 function xmlHttpGet(url, params, callback, context) {
   var httpRequest = createRequest(callback, context, params.f === 'text');
   delete params.f;
@@ -608,7 +2056,14 @@ function xmlHttpGet(url, params, callback, context) {
   return httpRequest;
 }
 
-// AJAX handlers for CORS (modern browsers) or JSONP (older browsers)
+/**
+ * AJAX handlers for CORS (modern browsers) or JSONP (older browsers)
+ * @param  {String}   url
+ * @param  {Object}   params
+ * @param  {Function} callback
+ * @param  {*=}       context
+ * @return {XMLHttpRequest|Object}
+ */
 
 function request(url, params, callback, context) {
   var httpRequest = createRequest(callback, context, params.f === 'text');
@@ -644,6 +2099,14 @@ function request(url, params, callback, context) {
 
   return httpRequest;
 }
+
+/**
+ * @param  {String}   url
+ * @param  {Object}   params
+ * @param  {Function} callback
+ * @param  {*=}       context
+ * @return {Object}
+ */
 
 function jsonp(url, params, callback, context) {
   global._OgcLeafletCallbacks = global._OgcLeafletCallbacks || {};
@@ -696,6 +2159,7 @@ function jsonp(url, params, callback, context) {
 }
 
 var get = _Support2['default'].cors ? xmlHttpGet : jsonp;
+exports.get = get;
 get.CORS = xmlHttpGet;
 get.JSONP = jsonp;
 
@@ -713,7 +2177,7 @@ exports.post = xmlHttpPost;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./Support":43,"./Util":50,"babel-runtime/helpers/interop-require-default":13,"leaflet":"leaflet"}],40:[function(require,module,exports){
+},{"./Support":53,"./Util":60,"babel-runtime/helpers/interop-require-default":13,"leaflet":"leaflet"}],50:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -889,7 +2353,7 @@ exports['default'] = service;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Request":39,"../Support":43,"../Util":50,"babel-runtime/core-js/object/define-property":3,"babel-runtime/core-js/object/get-own-property-descriptor":4,"babel-runtime/core-js/object/get-own-property-names":5,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"leaflet":"leaflet"}],41:[function(require,module,exports){
+},{"../Request":49,"../Support":53,"../Util":60,"babel-runtime/core-js/object/define-property":3,"babel-runtime/core-js/object/get-own-property-descriptor":4,"babel-runtime/core-js/object/get-own-property-names":5,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"leaflet":"leaflet"}],51:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -964,7 +2428,7 @@ function wfsService(options) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Tasks/DescribeFeatureType":44,"../Tasks/GetCapabilities":45,"../Tasks/GetFeature":46,"./Service":40,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],42:[function(require,module,exports){
+},{"../Tasks/DescribeFeatureType":54,"../Tasks/GetCapabilities":55,"../Tasks/GetFeature":56,"./Service":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],52:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1073,7 +2537,7 @@ function wmsService(options) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Tasks/GetCapabilities":45,"../Tasks/GetFeatureInfo":47,"../Tasks/GetLegendGraphic":48,"./Service":40,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],43:[function(require,module,exports){
+},{"../Tasks/GetCapabilities":55,"../Tasks/GetFeatureInfo":57,"../Tasks/GetLegendGraphic":58,"./Service":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],53:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1082,8 +2546,10 @@ Object.defineProperty(exports, '__esModule', {
 var cors = window.XMLHttpRequest && 'withCredentials' in new window.XMLHttpRequest();
 exports.cors = cors;
 var pointerEvents = document.documentElement.style.pointerEvents === '';
-
 exports.pointerEvents = pointerEvents;
+var WMS_VERSION = '1.3.0';
+
+exports.WMS_VERSION = WMS_VERSION;
 var Support = {
   cors: cors,
   pointerEvents: pointerEvents
@@ -1092,7 +2558,7 @@ var Support = {
 exports.Support = Support;
 exports['default'] = Support;
 
-},{}],44:[function(require,module,exports){
+},{}],54:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1163,7 +2629,7 @@ function describeFeatureType(endpoint) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],45:[function(require,module,exports){
+},{"./Task":59,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],55:[function(require,module,exports){
 'use strict';
 
 var _get = require('babel-runtime/helpers/get')['default'];
@@ -1178,6 +2644,8 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 });
 exports.getCapabilities = getCapabilities;
+
+var _wmsCapabilities = require('wms-capabilities');
 
 var _Task2 = require('./Task');
 
@@ -1223,6 +2691,16 @@ var GetCapabilities = (function (_Task) {
     }
 
     /**
+     * @param  {String} xml
+     * @return {Object}
+     */
+  }, {
+    key: '_parseCapabilities',
+    value: function _parseCapabilities(xml) {
+      return new _wmsCapabilities.WMSCapabilities(xml).toJSON();
+    }
+
+    /**
      * @param  {Function} callback
      * @param  {*=}       context
      * @return {GetCapabilites}
@@ -1230,10 +2708,14 @@ var GetCapabilities = (function (_Task) {
   }, {
     key: 'run',
     value: function run(callback, context) {
-      return _get(Object.getPrototypeOf(GetCapabilities.prototype), 'request', this).call(this, function (error, text) {
+      var _this = this;
+
+      return _get(Object.getPrototypeOf(GetCapabilities.prototype), 'request', this).call(this, function (error, capabilities) {
         // parse capabilities here
-        // if (!error) { text = this._parseCapabilities(text); }
-        callback.call(context, error, text);
+        if (!error) {
+          capabilities = _this._parseCapabilities(capabilities);
+        }
+        callback.call(context, error, capabilities);
       }, context);
     }
   }]);
@@ -1247,7 +2729,7 @@ function getCapabilities(endpoint) {
   return new GetCapabilities(endpoint);
 }
 
-},{"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11}],46:[function(require,module,exports){
+},{"./Task":59,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"wms-capabilities":38}],56:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1439,7 +2921,7 @@ function getFeature(endpoint) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Util":50,"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],47:[function(require,module,exports){
+},{"../Util":60,"./Task":59,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],57:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1459,6 +2941,8 @@ exports.getFeatureInfo = getFeatureInfo;
 var _Task2 = require('./Task');
 
 var _Util = require('../Util');
+
+var _Support = require('../Support');
 
 var L = global.L || require('leaflet');
 
@@ -1483,7 +2967,7 @@ var GetFeatureInfo = (function (_Task) {
 
     L.Util.extend(this.params, {
       service: 'WMS',
-      version: '1.3.0',
+      version: _Support.WMS_VERSION,
       info_format: 'application/json',
       request: 'GetFeatureInfo',
       crs: 'EPSG:4326',
@@ -1550,6 +3034,7 @@ var GetFeatureInfo = (function (_Task) {
     key: 'at',
     value: function at(latlng) {
       var px = undefined;
+      var isv13 = parseFloat(this.params.version) >= DEFAULT_WMS_VERSION;
       if (latlng instanceof L.LatLng) {
         if (this._map) {
           // project
@@ -1561,23 +3046,34 @@ var GetFeatureInfo = (function (_Task) {
         px = latlng;
       }
 
-      this.params.x = px.x;
-      this.params.y = px.y;
+      this.params[isv13 ? 'I' : 'X'] = px.x;
+      this.params[isv13 ? 'J' : 'Y'] = px.y;
 
       return this;
     }
 
     /**
+     * @param  {Number} buffer
+     * @return {GetFeatureInfo}
+     */
+  }, {
+    key: 'buffer',
+    value: function buffer() {
+      var _buffer = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
+
+      this.params.buffer = _buffer;
+      return this;
+    }
+
+    /**
+     * Buffer alias
      * @param  {Number} tolerance
      * @return {GetFeatureInfo}
      */
   }, {
     key: 'tolerance',
-    value: function tolerance() {
-      var _tolerance = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
-
-      this.params.buffer = _tolerance;
-      return this;
+    value: function tolerance(_tolerance) {
+      return this.buffer(_tolerance);
     }
 
     /**
@@ -1678,7 +3174,7 @@ function getFeatureInfo(endpoint) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Util":50,"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],48:[function(require,module,exports){
+},{"../Support":53,"../Util":60,"./Task":59,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],58:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1696,6 +3192,10 @@ Object.defineProperty(exports, '__esModule', {
 exports.getLegendGraphic = getLegendGraphic;
 
 var _Task2 = require('./Task');
+
+var _Request = require('../Request');
+
+var _Support = require('../Support');
 
 /**
  * @class ogc.Tasks.GetLegendGrapic
@@ -1715,20 +3215,27 @@ var GetLegendGraphic = (function (_Task) {
 
     _get(Object.getPrototypeOf(GetLegendGraphic.prototype), 'constructor', this).call(this, endpoint);
 
+    if (endpoint.options) {
+      console.log(endpoint.options.layers);
+      this.layers(endpoint.options.layers);
+    }
+
     /**
      * @type {Object}
      */
     this.defaultLegendStyles = {
       fontAntiAliasing: true,
       dpi: 72,
-      fontName: 'Helvetica',
+      fontName: 'Arial',
       bgColor: '#ffffff',
       fontStyle: 'normal'
     };
 
     L.Util.extend(this.params, {
-      'request': 'GetLegendGraphic',
-      'format': 'image/png'
+      request: 'GetLegendGraphic',
+      format: 'image/png',
+      service: 'WMS',
+      version: _Support.WMS_VERSION
     });
   }
 
@@ -1756,6 +3263,17 @@ var GetLegendGraphic = (function (_Task) {
     }
 
     /**
+     * @param  {Array.<String>|String} layers
+     * @return {GetLegendGraphic}
+     */
+  }, {
+    key: 'layers',
+    value: function layers(_layers) {
+      this._layers = L.Util.isArray(_layers) ? _layers : [_layers];
+      return this;
+    }
+
+    /**
      * @static
      * @param  {Object} options
      * @return {String}
@@ -1770,8 +3288,76 @@ var GetLegendGraphic = (function (_Task) {
     value: function styles() {
       var _styles = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
-      this.params.legend_options = this._formatLegendOptions(L.Util.extend({}, this.defaultLegendStyles, _styles));
+      this.params.legend_options = GetLegendGraphic._formatLegendOptions(L.Util.extend({}, this.defaultLegendStyles, _styles));
       return this;
+    }
+
+    /**
+     * @param  {L.Point|Object} size
+     * @return {GetLegendGraphic}
+     */
+  }, {
+    key: 'size',
+    value: function size(_size) {
+      this.params.width = _size.x;
+      this.params.height = _size.y;
+      return this;
+    }
+
+    /**
+     * Generates graphics url
+     * @param  {String} layer
+     * @return {String}
+     */
+  }, {
+    key: '_getLegendUrl',
+    value: function _getLegendUrl(layer) {
+      this.layer(layer);
+      var url = this.options.proxy ? this.options.proxy + '?' + this.options.url : this.options.url;
+      return url + '?' + (0, _Request.serialize)(this.params);
+    }
+
+    /**
+     * @override
+     * @param  {Function} callback
+     * @param  {*=}       context
+     * @return {GetLegendGraphic}
+     */
+  }, {
+    key: 'request',
+    value: function request(callback, context) {
+      var _this = this;
+
+      if (!(this._layers || this.params.layer)) {
+        throw new Error('GetLegendGraphic: layer must be defined');
+      }
+
+      L.Util.requestAnimFrame(function () {
+        var layers = _this._layers || [_this.params.layer];
+        _this.styles();
+        callback.call(context, null, {
+          layers: layers.map(function (layer) {
+            return {
+              name: layer,
+              url: _this._getLegendUrl(layer)
+            };
+          }, _this)
+        });
+      }, this);
+
+      return this;
+    }
+
+    /**
+     * Wrapper
+     * @param  {Function} callback
+     * @param  {*=}       context
+     * @return {GetLegendGraphic}
+     */
+  }, {
+    key: 'run',
+    value: function run(callback, context) {
+      return this.request(callback, context);
     }
   }], [{
     key: '_formatLegendOptions',
@@ -1782,7 +3368,7 @@ var GetLegendGraphic = (function (_Task) {
       for (var i = 0, len = params.length; i < len; i++) {
         var key = params[i];
         if (options.hasOwnProperty(key)) {
-          paramString += key + ':' + pairs[key] + ';';
+          paramString += key + ':' + options[key] + ';';
         }
       }
       return paramString;
@@ -1800,7 +3386,7 @@ function getLegendGraphic(endpoint) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./Task":49,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],49:[function(require,module,exports){
+},{"../Request":49,"../Support":53,"./Task":59,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],59:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1932,7 +3518,7 @@ exports['default'] = task;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Request":39,"../Support":43,"../Util":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/interop-require-default":13,"leaflet":"leaflet"}],50:[function(require,module,exports){
+},{"../Request":49,"../Support":53,"../Util":60,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/interop-require-default":13,"leaflet":"leaflet"}],60:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1942,6 +3528,7 @@ Object.defineProperty(exports, '__esModule', {
 exports.shallowClone = shallowClone;
 exports.cleanUrl = cleanUrl;
 exports.boundsToBBox = boundsToBBox;
+exports.reduce = reduce;
 var L = global.L || require('leaflet');
 
 // checks if 2 x,y points are equal
@@ -2008,10 +3595,58 @@ function boundsToBBox(bounds) {
   return bounds._min && bounds._max ? [bounds._min.x, bounds._min.y, bounds._max.x, bounds._max.y] : [bounds._southWest.lng, bounds._northEast.lat, bounds._northEast.lng, bounds._southWest.lat];
 }
 
+/**
+ * @example
+ * <code>
+ * reduce(
+ *   [1, 2, 3], [], function(curr, item, cb){
+ *     setTimeout(function(){
+ *       cb(null, curr.concat([item + 10]));
+ *     }, 200);
+ *   }, function(err, result) {
+ *     console.log(result); // [11, 12, 13]
+ * });
+ * </code>
+ * @param  {Array.<*>} values
+ * @param  {*}         initial
+ * @param  {Function}  fn       process item fn(memo, item, callback)
+ * @param  {Function}  done     queue complete
+ * @param  {*=}        context
+ */
+
+function reduce(values, initial, fn, cb, context) {
+  var curr = initial;
+
+  function next(index) {
+    var sync = true;
+    for (var i = index; i < values.length; i++) {
+      var done = false;
+      fn(curr, values[i], function (err, val) {
+        if (err) {
+          return cb.call(context, err, curr);
+        }
+        done = true;
+        curr = val;
+        if (!sync) {
+          next(i + 1);
+        }
+      });
+      sync = done;
+      if (!sync) {
+        return;
+      }
+    }
+    cb.call(context, null, curr);
+  }
+
+  next(0);
+}
+
 var Util = {
   shallowClone: shallowClone,
   cleanUrl: cleanUrl,
-  boundsToBBox: boundsToBBox
+  boundsToBBox: boundsToBBox,
+  reduce: reduce
 };
 
 exports.Util = Util;
@@ -2019,7 +3654,7 @@ exports['default'] = Util;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"leaflet":"leaflet"}],51:[function(require,module,exports){
+},{"leaflet":"leaflet"}],61:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -2041,7 +3676,11 @@ var _TasksTask = require('./Tasks/Task');
 
 var _TasksGetFeature = require('./Tasks/GetFeature');
 
+var _TasksGetCapabilities = require('./Tasks/GetCapabilities');
+
 var _TasksDescribeFeatureType = require('./Tasks/DescribeFeatureType');
+
+var _TasksGetFeatureInfo = require('./Tasks/GetFeatureInfo');
 
 var _TasksGetLegendGraphic = require('./Tasks/GetLegendGraphic');
 
@@ -2065,15 +3704,17 @@ var _ServicesWMS = require('./Services/WMS');
 
 var _LayersWMS = require('./Layers/WMS');
 
-//import { TiledMapLayer, tiledMapLayer } from './Layers/TiledMapLayer';
-//import { RasterLayer } from './Layers/RasterLayer';
-//import { ImageMapLayer, imageMapLayer } from './Layers/ImageMapLayer';
-//import { DynamicMapLayer, dynamicMapLayer } from './Layers/DynamicMapLayer';
 //import { FeatureGrid } from './Layers/FeatureLayer/FeatureGrid';
 //import { FeatureManager } from './Layers/FeatureLayer/FeatureManager';
 //import { FeatureLayer, featureLayer } from './Layers/FeatureLayer/FeatureLayer';
 
-var L = global.L || require('leaflet');L.ogc = {
+// import controls
+
+var _ControlsLegend = require('./Controls/Legend');
+
+var L = global.L || require('leaflet');
+
+L.ogc = {
   Service: _ServicesService.Service, service: _ServicesService.service,
   WFSService: _ServicesWFS.WFSService, wfsService: _ServicesWFS.wfsService,
   WMSService: _ServicesWMS.WMSService, wmsService: _ServicesWMS.wmsService,
@@ -2082,16 +3723,41 @@ var L = global.L || require('leaflet');L.ogc = {
   get: _Request.get, post: _Request.post, request: _Request.request,
   Support: _Support.Support,
 
-  GetCapabilities: _TasksGetFeature.GetCapabilities, getCapabilities: _TasksGetFeature.getCapabilities,
+  GetCapabilities: _TasksGetCapabilities.GetCapabilities, getCapabilities: _TasksGetCapabilities.getCapabilities,
   GetLegendGraphic: _TasksGetLegendGraphic.GetLegendGraphic, getLegendGraphic: _TasksGetLegendGraphic.getLegendGraphic,
-  GetFeatureInfo: _TasksGetFeature.GetFeatureInfo, getFeatureInfo: _TasksGetFeature.getFeatureInfo,
+  GetFeatureInfo: _TasksGetFeatureInfo.GetFeatureInfo, getFeatureInfo: _TasksGetFeatureInfo.getFeatureInfo,
   GetFeature: _TasksGetFeature.GetFeature, getFeature: _TasksGetFeature.getFeature,
   DescribeFeatureType: _TasksDescribeFeatureType.DescribeFeatureType, describeFeatureType: _TasksDescribeFeatureType.describeFeatureType,
+
+  Legend: _ControlsLegend.Legend, legend: _ControlsLegend.legend,
 
   WMS: _LayersWMS.WMS, wms: _LayersWMS.wms,
 
   // aliases
-  DynamicMapLayer: _LayersWMS.WMS
+  DynamicMapLayer: _LayersWMS.WMS,
+
+  Controls: {
+    Legend: _ControlsLegend.Legend
+  },
+  controls: {
+    legend: _ControlsLegend.legend
+  },
+
+  // namespaced
+  Tasks: {
+    GetCapabilities: _TasksGetCapabilities.GetCapabilities,
+    GetLegendGraphic: _TasksGetLegendGraphic.GetLegendGraphic,
+    GetFeatureInfo: _TasksGetFeatureInfo.GetFeatureInfo,
+    GetFeature: _TasksGetFeature.GetFeature,
+    DescribeFeatureType: _TasksDescribeFeatureType.DescribeFeatureType
+  },
+
+  Layers: {
+    WMS: _LayersWMS.WMS
+  },
+  layers: {
+    wms: _LayersWMS.wms
+  }
 };
 
 exports['default'] = L.ogc;
@@ -2099,7 +3765,7 @@ module.exports = exports['default'];
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./Layers/WMS":38,"./Request":39,"./Services/Service":40,"./Services/WFS":41,"./Services/WMS":42,"./Support":43,"./Tasks/DescribeFeatureType":44,"./Tasks/GetFeature":46,"./Tasks/GetLegendGraphic":48,"./Tasks/Task":49,"./Util":50,"leaflet":"leaflet"}]},{},[1])(1)
+},{"./Controls/Legend":47,"./Layers/WMS":48,"./Request":49,"./Services/Service":50,"./Services/WFS":51,"./Services/WMS":52,"./Support":53,"./Tasks/DescribeFeatureType":54,"./Tasks/GetCapabilities":55,"./Tasks/GetFeature":56,"./Tasks/GetFeatureInfo":57,"./Tasks/GetLegendGraphic":58,"./Tasks/Task":59,"./Util":60,"leaflet":"leaflet"}]},{},[1])(1)
 });
 
 

@@ -24,7 +24,9 @@
     var geometries;
 
     map.on('click', function(evt) {
-       wms.identify().at(evt.latlng).run(function(err, geojson) {
+       wms.identify()
+          .at(evt.latlng)
+          .run(function(err, geojson) {
          if (!err) {
             if (geometries) map.removeLayer(geometries);
 

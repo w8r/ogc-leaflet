@@ -4,7 +4,11 @@ import { warn } from './Util';
 
 let callbacks = 0;
 
-function serialize(params) {
+/**
+ * @param  {Object} params
+ * @return {String}
+ */
+export function serialize(params) {
   let data = '';
 
   // params.format = params.format || 'application/json';
@@ -37,10 +41,16 @@ function serialize(params) {
   return data;
 }
 
+/**
+ * @param  {Function} callback
+ * @param  {*=}       context
+ * @param  {Boolean=} text
+ * @return {XMLHttpRequest}
+ */
 function createRequest(callback, context, text = false) {
   let httpRequest = new window.XMLHttpRequest();
 
-  httpRequest.onerror = function(e) {
+  httpRequest.onerror = (e) => {
     httpRequest.onreadystatechange = L.Util.falseFn;
 
     callback.call(context, {
@@ -51,7 +61,7 @@ function createRequest(callback, context, text = false) {
     }, null);
   };
 
-  httpRequest.onreadystatechange = function() {
+  httpRequest.onreadystatechange = () => {
     let response, error;
 
     if (httpRequest.readyState === 4) {
@@ -86,6 +96,13 @@ function createRequest(callback, context, text = false) {
   return httpRequest;
 }
 
+/**
+ * @param  {String}   url
+ * @param  {Object}   params
+ * @param  {Function} callback
+ * @param  {*=}       context
+ * @return {XMLHttpRequest}
+ */
 function xmlHttpPost(url, params, callback, context) {
   let httpRequest = createRequest(callback, context, params.f === 'text');
   delete params.f;
@@ -97,6 +114,13 @@ function xmlHttpPost(url, params, callback, context) {
   return httpRequest;
 }
 
+/**
+ * @param  {String}   url
+ * @param  {Object}   params
+ * @param  {Function} callback
+ * @param  {*=}       context
+ * @return {XMLHttpRequest}
+ */
 function xmlHttpGet(url, params, callback, context) {
   let httpRequest = createRequest(callback, context, params.f === 'text');
   delete params.f;
@@ -107,7 +131,14 @@ function xmlHttpGet(url, params, callback, context) {
   return httpRequest;
 }
 
-// AJAX handlers for CORS (modern browsers) or JSONP (older browsers)
+/**
+ * AJAX handlers for CORS (modern browsers) or JSONP (older browsers)
+ * @param  {String}   url
+ * @param  {Object}   params
+ * @param  {Function} callback
+ * @param  {*=}       context
+ * @return {XMLHttpRequest|Object}
+ */
 export function request(url, params, callback, context) {
   let httpRequest = createRequest(callback, context, params.f === 'text');
   delete params.f;
@@ -146,6 +177,13 @@ export function request(url, params, callback, context) {
   return httpRequest;
 }
 
+/**
+ * @param  {String}   url
+ * @param  {Object}   params
+ * @param  {Function} callback
+ * @param  {*=}       context
+ * @return {Object}
+ */
 export function jsonp(url, params, callback, context) {
   global._OgcLeafletCallbacks = global._OgcLeafletCallbacks || {};
   let callbackId = 'c' + callbacks;
@@ -157,7 +195,7 @@ export function jsonp(url, params, callback, context) {
   script.src = url + '?' + serialize(params);
   script.id = callbackId;
 
-  global._EsriLeafletCallbacks[callbackId] = function(response) {
+  global._EsriLeafletCallbacks[callbackId] = (response) => {
     if (global._EsriLeafletCallbacks[callbackId] !== true) {
       let error;
       let responseType = Object.prototype.toString.call(response);
@@ -188,7 +226,7 @@ export function jsonp(url, params, callback, context) {
   return {
     id: callbackId,
     url: script.src,
-    abort: function() {
+    abort: () => {
       global._EsriLeafletCallbacks._callback[callbackId]({
         code: 0,
         message: 'Request aborted.'
@@ -197,15 +235,15 @@ export function jsonp(url, params, callback, context) {
   };
 }
 
-let get = ((Support.cors) ? xmlHttpGet : jsonp);
+export let get = ((Support.cors) ? xmlHttpGet : jsonp);
 get.CORS = xmlHttpGet;
 get.JSONP = jsonp;
 
 // choose the correct AJAX handler depending on CORS support
 // export the Request object to call the different handlers for debugging
 export const Request = {
-  request: request,
-  get: get,
+  request,
+  get,
   post: xmlHttpPost
 };
 

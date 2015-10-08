@@ -1,3 +1,4 @@
+import { WMSCapabilities } from 'wms-capabilities';
 import { Task } from './Task';
 
 /**
@@ -9,7 +10,7 @@ export class GetCapabilities extends Task {
   /**
    * @param  {Object|String} endpoint
    */
-  constructor(endpoint){
+  constructor(endpoint) {
     super(endpoint);
 
     L.Util.extend(this.params, {
@@ -32,15 +33,23 @@ export class GetCapabilities extends Task {
   }
 
   /**
+   * @param  {String} xml
+   * @return {Object}
+   */
+  _parseCapabilities(xml) {
+    return new WMSCapabilities(xml).toJSON();
+  }
+
+  /**
    * @param  {Function} callback
    * @param  {*=}       context
    * @return {GetCapabilites}
    */
   run (callback, context) {
-    return super.request(function(error, text) {
+    return super.request((error, capabilities) => {
       // parse capabilities here
-      // if (!error) { text = this._parseCapabilities(text); }
-      callback.call(context, error, text);
+      if (!error) { capabilities = this._parseCapabilities(capabilities); }
+      callback.call(context, error, capabilities);
     }, context);
   }
 }

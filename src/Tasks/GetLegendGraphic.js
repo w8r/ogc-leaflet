@@ -1,5 +1,7 @@
 const L  = global.L || require('leaflet');
-import { Task } from './Task'
+import { Task } from './Task';
+import { serialize } from '../Request';
+import { WMS_VERSION } from '../Support';
 
 /**
  * @class ogc.Tasks.GetLegendGrapic
@@ -13,20 +15,27 @@ export class GetLegendGraphic extends Task {
   constructor (endpoint) {
     super(endpoint);
 
+    if(endpoint.options) {
+      console.log(endpoint.options.layers);
+      this.layers(endpoint.options.layers);
+    }
+
     /**
      * @type {Object}
      */
     this.defaultLegendStyles = {
       fontAntiAliasing: true,
       dpi: 72,
-      fontName: 'Helvetica',
+      fontName: 'Arial',
       bgColor: '#ffffff',
       fontStyle: 'normal'
     };
 
     L.Util.extend(this.params, {
-      'request': 'GetLegendGraphic',
-      'format': 'image/png'
+      request: 'GetLegendGraphic',
+      format: 'image/png',
+      service: 'WMS',
+      version: WMS_VERSION
     });
   }
 
@@ -49,6 +58,15 @@ export class GetLegendGraphic extends Task {
   }
 
   /**
+   * @param  {Array.<String>|String} layers
+   * @return {GetLegendGraphic}
+   */
+  layers(layers) {
+    this._layers = L.Util.isArray(layers) ? layers : [layers];
+    return this;
+  }
+
+  /**
    * @static
    * @param  {Object} options
    * @return {String}
@@ -64,7 +82,7 @@ export class GetLegendGraphic extends Task {
     for (let i = 0, len = params.length; i < len; i++) {
       let key = params[i];
       if (options.hasOwnProperty(key)) {
-        paramString += key + ':' + pairs[key] + ';'
+        paramString += key + ':' + options[key] + ';'
       }
     }
     return paramString;
@@ -75,10 +93,70 @@ export class GetLegendGraphic extends Task {
    * @return {GetLegendGraphic}
    */
   styles(styles = {}) {
-    this.params.legend_options = this._formatLegendOptions(
+    this.params.legend_options = GetLegendGraphic._formatLegendOptions(
       L.Util.extend({}, this.defaultLegendStyles, styles)
     );
     return this;
+  }
+
+  /**
+   * @param  {L.Point|Object} size
+   * @return {GetLegendGraphic}
+   */
+  size(size) {
+    this.params.width = size.x;
+    this.params.height = size.y;
+    return this;
+  }
+
+  /**
+   * Generates graphics url
+   * @param  {String} layer
+   * @return {String}
+   */
+  _getLegendUrl(layer) {
+    this.layer(layer);
+    let url = (this.options.proxy) ?
+      this.options.proxy + '?' + this.options.url :
+      this.options.url;
+    return url + '?' + serialize(this.params);
+  }
+
+  /**
+   * @override
+   * @param  {Function} callback
+   * @param  {*=}       context
+   * @return {GetLegendGraphic}
+   */
+  request(callback, context) {
+    if (!(this._layers || this.params.layer)) {
+      throw new Error('GetLegendGraphic: layer must be defined');
+    }
+
+    L.Util.requestAnimFrame(() => {
+      let layers = this._layers || [this.params.layer];
+      this.styles();
+      callback.call(context, null, {
+        layers: layers.map((layer) => {
+          return {
+            name: layer,
+            url: this._getLegendUrl(layer)
+          };
+        }, this)
+      });
+    }, this);
+
+    return this;
+  }
+
+  /**
+   * Wrapper
+   * @param  {Function} callback
+   * @param  {*=}       context
+   * @return {GetLegendGraphic}
+   */
+  run(callback, context) {
+    return this.request(callback, context);
   }
 }
 

@@ -1,6 +1,7 @@
 const L  = global.L || require('leaflet');
 import { Task } from './Task';
 import { boundsToBBox } from '../Util';
+import { WMS_VERSION } from '../Support';
 
 const DEFAULT_WMS_VERSION = 1.3;
 
@@ -18,7 +19,7 @@ export class GetFeatureInfo extends Task {
 
     L.Util.extend(this.params, {
       service: 'WMS',
-      version: '1.3.0',
+      version: WMS_VERSION,
       info_format: 'application/json',
       request: 'GetFeatureInfo',
       crs: 'EPSG:4326',
@@ -78,6 +79,7 @@ export class GetFeatureInfo extends Task {
    */
   at(latlng) {
     let px;
+    const isv13 = (parseFloat(this.params.version) >= DEFAULT_WMS_VERSION);
     if (latlng instanceof L.LatLng) {
       if (this._map) { // project
         px = this._map.latLngToContainerPoint(latlng);
@@ -88,19 +90,28 @@ export class GetFeatureInfo extends Task {
       px = latlng;
     }
 
-    this.params.x = px.x;
-    this.params.y = px.y;
+    this.params[isv13 ? 'I' : 'X'] = px.x;
+    this.params[isv13 ? 'J' : 'Y'] = px.y;
 
     return this;
   }
 
   /**
+   * @param  {Number} buffer
+   * @return {GetFeatureInfo}
+   */
+  buffer(buffer = 0) {
+    this.params.buffer = buffer;
+    return this;
+  }
+
+  /**
+   * Buffer alias
    * @param  {Number} tolerance
    * @return {GetFeatureInfo}
    */
-  tolerance(tolerance = 0) {
-    this.params.buffer = tolerance;
-    return this;
+  tolerance(tolerance) {
+    return this.buffer(tolerance);
   }
 
   /**

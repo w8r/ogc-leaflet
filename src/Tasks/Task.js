@@ -77,7 +77,7 @@ export class Task {
   }
 
   _request(method, path, params, callback, context) {
-    var url = (this.options.proxy) ?
+    let url = (this.options.proxy) ?
       this.options.proxy + '?' + this.options.url + path :
       this.options.url + path;
 
