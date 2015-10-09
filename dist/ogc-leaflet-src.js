@@ -1727,7 +1727,10 @@ var Legend = (function (_L$Control) {
   function Legend(layers, options) {
     _classCallCheck(this, Legend);
 
-    _get(Object.getPrototypeOf(Legend.prototype), 'constructor', this).call(this, L.Util.extend({}, {}, options));
+    _get(Object.getPrototypeOf(Legend.prototype), 'constructor', this).call(this, L.Util.extend({}, L.Control.prototype.options, {
+      layerTemplate: '<li>{layerName}<br><img src="{src}" alt="{layerName}" /></li>',
+      listTemplate: '<ul>{layers}</ul>'
+    }, options));
     this._layers = L.Util.isArray(layers) ? layers : [layers];
   }
 
@@ -1769,14 +1772,13 @@ var Legend = (function (_L$Control) {
     key: '_onLoad',
     value: function _onLoad(error, legend) {
       if (!error) {
-        console.log(legend);
-        return;
+        // return console.log(legend);
         var layersHtml = '';
         for (var i = 0, len = legend.layers.length; i < len; i++) {
           var layer = legend.layers[i];
           layersHtml += L.Util.template(this.options.layerTemplate, {
-            layerName: layer.layerName,
-            legends: legendsHtml
+            layerName: layer.name,
+            src: legend.layers[i].url
           });
         }
         this._container.innerHTML = L.Util.template(this.options.listTemplate, {

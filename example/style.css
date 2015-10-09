@@ -15,3 +15,9 @@ html, body, #map {
 #info-bar .content {
     padding: 20px;
 }
+
+.leaflet-legend-control {
+    background: #ffffff;
+    overflow-y: auto;
+    max-height: 400px;
+}
