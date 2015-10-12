@@ -28,7 +28,14 @@ export class GetLegendGraphic extends Task {
       dpi: 72,
       fontName: 'Arial',
       bgColor: '#ffffff',
-      fontStyle: 'normal'
+      fontStyle: 'normal',
+      fontColor: '#000000' //,
+      // forceRule: 'True',
+      // borderColor: '#ff0000',
+      // dx: 1.8,
+      // dy: 0.2,
+      // mx: 0.2,
+      // my: 0.2
     };
 
     L.Util.extend(this.params, {
@@ -76,8 +83,11 @@ export class GetLegendGraphic extends Task {
     const params = [
       'dpi', 'fontAntiAliasing',
       'fontName', 'bgColor',
-      'fontSize', 'fontStyle'
-      ];
+      'fontSize', 'fontStyle',
+      'dx', 'dy', 'mx', 'my',
+      'fontColor', 'forceRule',
+      'borderColor'
+    ];
 
     for (let i = 0, len = params.length; i < len; i++) {
       let key = params[i];

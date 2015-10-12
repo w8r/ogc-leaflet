@@ -1719,20 +1719,40 @@ exports.legend = legend;
 
 var _Util = require('../Util');
 
+/**
+ * @class ogc.Controls.Laegend
+ * @extends {L.Control}
+ */
 var L = global.L || require('leaflet');
 
 var Legend = (function (_L$Control) {
   _inherits(Legend, _L$Control);
 
+  /**
+   * @param  {Array.<L.TileLayer.WMS>|L.TileLayer.WMS} layers
+   * @param  {Object} options
+   * @param  {String} options.layerTemplate Template string for one layer
+   * @param  {String} options.listTemplate  Template for layers list
+   */
+
   function Legend(layers, options) {
     _classCallCheck(this, Legend);
 
     _get(Object.getPrototypeOf(Legend.prototype), 'constructor', this).call(this, L.Util.extend({}, L.Control.prototype.options, {
-      layerTemplate: '<li>{layerName}<br><img src="{src}" alt="{layerName}" /></li>',
-      listTemplate: '<ul>{layers}</ul>'
+      layerTemplate: '<li class="layer-row"> \
+                       <div class="layer-name">{layerName}</div> \
+                       <img class="legend-image" src="{src}" alt="{layerName}" /> \
+                      </li>',
+      listTemplate: '<ul>{layers}</ul>',
+      position: 'topright'
     }, options));
     this._layers = L.Util.isArray(layers) ? layers : [layers];
   }
+
+  /**
+   * @param  {L.Map} map
+   * @return {Element}
+   */
 
   _createClass(Legend, [{
     key: 'onAdd',
@@ -3230,7 +3250,14 @@ var GetLegendGraphic = (function (_Task) {
       dpi: 72,
       fontName: 'Arial',
       bgColor: '#ffffff',
-      fontStyle: 'normal'
+      fontStyle: 'normal',
+      fontColor: '#000000' //,
+      // forceRule: 'True',
+      // borderColor: '#ff0000',
+      // dx: 1.8,
+      // dy: 0.2,
+      // mx: 0.2,
+      // my: 0.2
     };
 
     L.Util.extend(this.params, {
@@ -3365,7 +3392,7 @@ var GetLegendGraphic = (function (_Task) {
     key: '_formatLegendOptions',
     value: function _formatLegendOptions(options) {
       var paramString = '';
-      var params = ['dpi', 'fontAntiAliasing', 'fontName', 'bgColor', 'fontSize', 'fontStyle'];
+      var params = ['dpi', 'fontAntiAliasing', 'fontName', 'bgColor', 'fontSize', 'fontStyle', 'dx', 'dy', 'mx', 'my', 'fontColor', 'forceRule', 'borderColor'];
 
       for (var i = 0, len = params.length; i < len; i++) {
         var key = params[i];

@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+    <head>
+        <title>OGC Leaflet &mdash; WMS</title>
+    	<link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.5/leaflet.css">
+    	<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.5/leaflet-src.js"></script>
+        <script type="text/javascript" src="../../dist/ogc-leaflet-src.js"></script>
+        <link rel="stylesheet" type="text/css" href="../style.css">
+    </head>
+    <body>
+    	<div id="map"></div>
+    </body>
+    <script type="text/javascript">
+    var map = L.map('map').setView([13.581920900545844, 25.839843749999996], 3);
+    var wms = L.ogc.wms(
+      'http://demo.opengeo.org/geoserver/wms', {
+        layers: [
+          'ne:ne'
+        ],
+        format: 'image/png'
+      }
+    ).addTo(map);
+
+    var geometries;
+
+    map.on('click', function(evt) {
+       wms.identify()
+          .at(evt.latlng)
+          .run(function(err, geojson) {
+         if (!err) {
+            if (geometries) map.removeLayer(geometries);
+
+            if (geojson.features.length !== 0) {
+                geometries = L.geoJson(geojson, { weight: 2 }).addTo(map);
+                var text = geojson.features.map(function(feature) {
+                    return feature.properties.formal_en;
+                }).join('\n');
+                map.openPopup('<pre>' + text + '</pre>',  evt.latlng);
+            }
+         }
+       })
+    });
+    </script>
+</html>

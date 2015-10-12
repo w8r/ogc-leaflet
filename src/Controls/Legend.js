@@ -1,16 +1,34 @@
 const L = global.L || require('leaflet');
 import { reduce } from '../Util';
 
+/**
+ * @class ogc.Controls.Laegend
+ * @extends {L.Control}
+ */
 export class Legend extends L.Control {
 
+  /**
+   * @param  {Array.<L.TileLayer.WMS>|L.TileLayer.WMS} layers
+   * @param  {Object} options
+   * @param  {String} options.layerTemplate Template string for one layer
+   * @param  {String} options.listTemplate  Template for layers list
+   */
   constructor(layers, options) {
     super(L.Util.extend({}, L.Control.prototype.options, {
-      layerTemplate: '<li>{layerName}<br><img src="{src}" alt="{layerName}" /></li>',
-      listTemplate: '<ul>{layers}</ul>'
+      layerTemplate: '<li class="layer-row"> \
+                       <div class="layer-name">{layerName}</div> \
+                       <img class="legend-image" src="{src}" alt="{layerName}" /> \
+                      </li>',
+      listTemplate: '<ul>{layers}</ul>',
+      position: 'topright'
     }, options));
     this._layers = L.Util.isArray(layers) ? layers : [layers];
   }
 
+  /**
+   * @param  {L.Map} map
+   * @return {Element}
+   */
   onAdd(map) {
     let container = this.options.container ||
         L.DomUtil.create('div', 'leaflet-legend-control leaflet-bar');
