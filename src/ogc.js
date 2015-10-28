@@ -25,7 +25,8 @@ import { WMSService, wmsService } from './Services/WMS';
 //import { FeatureLayerService, featureLayerService } from './Services/FeatureLayerService';
 
 // import layers
-import { WMS, wms } from './Layers/WMS';
+import { DynamicMapLayer, dynamicMapLayer } from './Layers/DynamicMapLayer';
+import { FeatureLayer, featureLayer } from './Layers/FeatureLayer';
 //import { FeatureGrid } from './Layers/FeatureLayer/FeatureGrid';
 //import { FeatureManager } from './Layers/FeatureLayer/FeatureManager';
 //import { FeatureLayer, featureLayer } from './Layers/FeatureLayer/FeatureLayer';
@@ -42,18 +43,22 @@ L.ogc = {
   get, post, request,
   Support,
 
+  // Tasks
   GetCapabilities, getCapabilities,
   GetLegendGraphic, getLegendGraphic,
   GetFeatureInfo, getFeatureInfo,
   GetFeature, getFeature,
   DescribeFeatureType, describeFeatureType,
 
+  // Controls
   Legend, legend,
 
-  WMS, wms,
+  // Layers
+  DynamicMapLayer, dynamicMapLayer,
+  FeatureLayer, featureLayer,
 
   // aliases
-  DynamicMapLayer: WMS,
+
 
   Controls: {
     Legend
@@ -72,10 +77,12 @@ L.ogc = {
   },
 
   Layers: {
-    WMS
+    DynamicMapLayer,
+    FeatureLayer
   },
   layers: {
-    wms
+    dynamicMapLayer,
+    featureLayer
   }
 }
 

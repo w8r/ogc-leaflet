@@ -42,6 +42,17 @@ export function serialize(params) {
 }
 
 /**
+ * @param  {String} proxy
+ * @param  {String} url
+ * @return {String}
+ */
+export function applyProxy(proxy, url) {
+  if (proxy) {
+    return proxy + (/\=$/.test(proxy) ? '' : '?') + encodeURIComponent(url);
+  } else return url;
+}
+
+/**
  * @param  {Function} callback
  * @param  {*=}       context
  * @param  {Boolean=} text
@@ -145,6 +156,8 @@ export function request(url, params, callback, context) {
 
   let paramString = serialize(params);
   let requestLength = (url + '?' + paramString).length;
+
+  console.log(url + '?' + paramString);
 
   // request is less then 2000 characters and the browser supports CORS,
   // make GET request with XMLHttpRequest

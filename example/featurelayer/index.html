@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
     <head>
-        <title>OGC Leaflet &mdash; WMS</title>
+        <title>OGC Leaflet &mdash; FeatureLayer</title>
     	<link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.5/leaflet.css">
     	<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.5/leaflet-src.js"></script>
         <script type="text/javascript" src="../../dist/ogc-leaflet-src.js"></script>
@@ -12,12 +12,14 @@
     </body>
     <script type="text/javascript">
     var map = L.map('map').setView([13.581920900545844, 25.839843749999996], 3);
-    var wms = L.ogc.dinamicMapLayer(
-      'http://nowcoast.noaa.gov/arcgis/services/nowcoast/analysis_ocean_sfc_sst_time/MapServer/WMSServer', {
-        layers: [1, 5],
-        format: 'image/jpeg'
+    var features = L.ogc.featureLayer(
+      'http://giswebservices.massgis.state.ma.us/geoserver/wfs', {
+        layers: [
+          'massgis:GISDATA.SCHOOLS_PT'
+        ],
+        proxy: 'https://jsonp.afeld.me/?url='
       }
     ).addTo(map);
-    var legend = L.ogc.controls.legend([wms], { position: 'topright' }).addTo(map);
+
     </script>
 </html>

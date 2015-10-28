@@ -1,7 +1,7 @@
 <!doctype html>
 <html>
     <head>
-        <title>OGC Leaflet &mdash; WMS</title>
+        <title>OGC Leaflet &mdash; Identify</title>
     	<link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.5/leaflet.css">
     	<script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.5/leaflet-src.js"></script>
         <script type="text/javascript" src="../../dist/ogc-leaflet-src.js"></script>
@@ -12,7 +12,7 @@
     </body>
     <script type="text/javascript">
     var map = L.map('map').setView([13.581920900545844, 25.839843749999996], 3);
-    var wms = L.ogc.wms(
+    var wms = L.ogc.dynamicMapLayer(
       'http://demo.opengeo.org/geoserver/wms', {
         layers: [
           'ne:ne'

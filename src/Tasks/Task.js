@@ -1,7 +1,7 @@
 const L  = global.L || require('leaflet');
 import { cors } from '../Support';
 import { cleanUrl } from '../Util';
-import Request from '../Request';
+import { Request, applyProxy } from '../Request';
 
 /**
  * @class ogc.Tasks.Task
@@ -77,9 +77,8 @@ export class Task {
   }
 
   _request(method, path, params, callback, context) {
-    let url = (this.options.proxy) ?
-      this.options.proxy + '?' + this.options.url + path :
-      this.options.url + path;
+    let proxy = this.options.proxy;
+    let url = applyProxy(this.options.proxy, this.options.url + path);
 
     if ((method === 'get' || method === 'request') && !this.options.useCors) {
       return Request.get.JSONP(url, params, callback, context);

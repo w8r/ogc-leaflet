@@ -17,9 +17,9 @@ export class GetFeature extends Task {
      * @type {Object}
      */
     L.Util.extend(this.params, {
-      srsName: 'EPSG:4326',
+      srs: 'EPSG:4326',
       request: 'GetFeature',
-      info_format: 'application/json'
+      outputFormat: 'application/json'
     });
 
     if(this._service && this._service.options) {
@@ -73,7 +73,7 @@ export class GetFeature extends Task {
     if (L.Util.isArray(layers)) {
       layers = layers.join(',');
     }
-    this.params.typeNames = layers;
+    this.params.typeName = layers;
     return this;
   }
 
@@ -94,7 +94,7 @@ export class GetFeature extends Task {
    * @param  {String|Array.<String>} property
    * @return {GetFeature}
    */
-  property (property) {
+  property (property = '') {
     if (L.Util.isArray(property)) {
       property = property.join(',');
     }
@@ -115,7 +115,8 @@ export class GetFeature extends Task {
    * @return {GetFeature}
    */
   bounds (bounds) {
-    return this.bbox(boundsToBBox(bounds));
+    this.params.cql_filter = this._getBBoxFilter(bounds);
+    return this;
   }
 
   /**
@@ -125,6 +126,55 @@ export class GetFeature extends Task {
   bbox (bbox) {
     this.params.bbox = bbox.join(',');
     return this;
+  }
+
+  /**
+   * @param  {L.LatLngBounds} bounds
+   * @param  {L.CRS}          crs
+   * @return {Array.<Number>}
+   */
+  _boundsToBBox(bounds, crs) {
+    let nw = crs.project(bounds.getNorthWest());
+    let se = crs.project(bounds.getSouthEast());
+
+    if(parseFloat(this.params.version) >= 1.3 &&
+       crs === L.CRS.EPSG4326) {
+      return [se.y, nw.x, nw.y, se.x];
+    } else {
+      return [nw.x, se.y, se.x, nw.y];
+    }
+  }
+
+  /**
+ * BBox CQL filter
+ * @param  {L.LatLngBounds} bounds
+ * @return {String}
+ */
+  _getBBoxFilter(bounds) {
+    let bbox = this._boundsToBBox(bounds, this._map.options.crs);
+    return 'BBOX(the_geom,' + bbox + ',\'' + this.params.srs + '\')';
+  }
+
+  /**
+   * @param  {L.Map} map
+   * @return {GetFeatureInfo}
+   */
+  on(map) {
+    super.on(map);
+    this.srs(map.options.crs.code);
+    return this;
+  }
+
+  where (where) {
+    return this.filter(where);
+  }
+
+  filter () {
+    return this;
+  }
+
+  run (callback, context) {
+    return this.request(callback, context);
   }
 
 }

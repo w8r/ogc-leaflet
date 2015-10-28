@@ -1,10 +1,17 @@
 const L  = global.L || require('leaflet');
 import { cors } from '../Support';
 import { cleanUrl } from '../Util';
-import { Request } from '../Request';
+import { Request, applyProxy } from '../Request';
 
+/**
+ * @class ogc.Services.Service
+ * @extends {Events}
+ */
 export class Service {
 
+  /**
+   * @param  {Object} options
+   */
   constructor(options = {}) {
     this.options = {
       proxy: false,
@@ -48,7 +55,8 @@ export class Service {
       method: method
     }, true);
 
-    var wrappedCallback = this._createServiceCallback(method, path, params, callback, context);
+    var wrappedCallback = this._createServiceCallback(
+      method, path, params, callback, context);
 
     if (this.options.token) {
       params.token = this.options.token;
@@ -58,9 +66,7 @@ export class Service {
       this._requestQueue.push([method, path, params, callback, context]);
       return;
     } else {
-      var url = this.options.proxy ?
-        this.options.proxy + '?' + this.options.url + path :
-        this.options.url + path;
+      var url = applyProxy(this.options.proxy, this.options.url + path);
 
       if ((method === 'get' || method === 'request') && !this.options.useCors) {
         return Request.get.JSONP(url, params, wrappedCallback);

@@ -5,7 +5,7 @@ import { wmsService } from '../Services/WMS';
  * @class ogc.Layers.WMS
  * @extends {L.TileLayer.WMS}
  */
-export class WMS extends L.TileLayer.WMS {
+export class DynamicMapLayer extends L.TileLayer.WMS {
 
   /**
    * @param  {String}  url
@@ -63,6 +63,6 @@ export class WMS extends L.TileLayer.WMS {
 
 }
 
-export function wms(url, options) {
-  return new WMS(url, options);
+export function dynamicMapLayer(url, options) {
+  return new DynamicMapLayer(url, options);
 }

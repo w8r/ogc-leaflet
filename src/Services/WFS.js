@@ -24,11 +24,38 @@ export class WFSService extends Service {
     return getFeature(this);
   }
 
+  query () {
+    return this.getFeature();
+  }
+
   /**
    * @return {ogc.Tasks.DescribeFeatureType}
    */
   describeFeatureType() {
     return describeFeatureType(this);
+  }
+
+  /**
+   * @return {ogc.Tasks.GetCapabilities}
+   */
+  getCapabilities () {
+    return getCapabilities(this)
+      .service('WFS')
+      .version('2.0.0');
+  }
+
+  /**
+   * @param  {Function=} callback
+   * @param  {*=}        context
+   * @return {ogc.Tasks.GetCapabilities}
+   */
+  metadata (callback, context) {
+    let task = this.getCapabilities(this);
+    if (arguments.length !== 0) {
+      return task.run(callback, context);
+    } else {
+      return task;
+    }
   }
 }
 

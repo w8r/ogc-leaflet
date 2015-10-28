@@ -13,7 +13,7 @@ var _srcOgc = require('./src/ogc');
 
 _defaults(exports, _interopExportWildcard(_srcOgc, _defaults));
 
-},{"./src/ogc":61,"babel-runtime/helpers/defaults":9,"babel-runtime/helpers/interop-export-wildcard":12}],2:[function(require,module,exports){
+},{"./src/ogc":63,"babel-runtime/helpers/defaults":9,"babel-runtime/helpers/interop-export-wildcard":12}],2:[function(require,module,exports){
 module.exports = { "default": require("core-js/library/fn/object/create"), __esModule: true };
 },{"core-js/library/fn/object/create":14}],3:[function(require,module,exports){
 module.exports = { "default": require("core-js/library/fn/object/define-property"), __esModule: true };
@@ -1819,7 +1819,7 @@ function legend(options) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Util":60,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],48:[function(require,module,exports){
+},{"../Util":62,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],48:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1834,7 +1834,7 @@ var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default
 Object.defineProperty(exports, '__esModule', {
   value: true
 });
-exports.wms = wms;
+exports.dynamicMapLayer = dynamicMapLayer;
 
 var _ServicesWMS = require('../Services/WMS');
 
@@ -1844,20 +1844,20 @@ var _ServicesWMS = require('../Services/WMS');
  */
 var L = global.L || require('leaflet');
 
-var WMS = (function (_L$TileLayer$WMS) {
-  _inherits(WMS, _L$TileLayer$WMS);
+var DynamicMapLayer = (function (_L$TileLayer$WMS) {
+  _inherits(DynamicMapLayer, _L$TileLayer$WMS);
 
   /**
    * @param  {String}  url
    * @param  {Object=} options
    */
 
-  function WMS(url) {
+  function DynamicMapLayer(url) {
     var options = arguments.length <= 1 || arguments[1] === undefined ? L.TileLayer.WMS.prototype.options : arguments[1];
 
-    _classCallCheck(this, WMS);
+    _classCallCheck(this, DynamicMapLayer);
 
-    _get(Object.getPrototypeOf(WMS.prototype), 'constructor', this).call(this, url, options);
+    _get(Object.getPrototypeOf(DynamicMapLayer.prototype), 'constructor', this).call(this, url, options);
 
     options.url = url;
     this.service = (0, _ServicesWMS.wmsService)(options);
@@ -1867,7 +1867,7 @@ var WMS = (function (_L$TileLayer$WMS) {
    * @return {ogc.Tasks.GetFeatureInfo}
    */
 
-  _createClass(WMS, [{
+  _createClass(DynamicMapLayer, [{
     key: 'identify',
     value: function identify() {
       return this.service.identify().on(this._map) // link to map and pre-set layers
@@ -1915,18 +1915,959 @@ var WMS = (function (_L$TileLayer$WMS) {
     }
   }]);
 
-  return WMS;
+  return DynamicMapLayer;
 })(L.TileLayer.WMS);
 
-exports.WMS = WMS;
+exports.DynamicMapLayer = DynamicMapLayer;
 
-function wms(url, options) {
-  return new WMS(url, options);
+function dynamicMapLayer(url, options) {
+  return new DynamicMapLayer(url, options);
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Services/WMS":52,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],49:[function(require,module,exports){
+},{"../Services/WMS":54,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],49:[function(require,module,exports){
+(function (global){
+'use strict';
+
+var _get = require('babel-runtime/helpers/get')['default'];
+
+var _inherits = require('babel-runtime/helpers/inherits')['default'];
+
+var _createClass = require('babel-runtime/helpers/create-class')['default'];
+
+var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+exports.featureLayer = featureLayer;
+
+var _VirtualGrid2 = require('./VirtualGrid');
+
+var _ServicesWFS = require('../Services/WFS');
+
+var L = global.L || require('leaflet');
+
+var FeatureLayer = (function (_VirtualGrid) {
+  _inherits(FeatureLayer, _VirtualGrid);
+
+  function FeatureLayer(url) {
+    var options = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
+
+    _classCallCheck(this, FeatureLayer);
+
+    _get(Object.getPrototypeOf(FeatureLayer.prototype), 'constructor', this).call(this, L.Util.extend({
+      cacheLayers: true
+    }, options));
+
+    options.url = url;
+    this.service = (0, _ServicesWFS.wfsService)(options);
+
+    this._cache = {};
+    // cache of what layers should be active
+    this._currentSnapshot = [];
+    this._activeRequests = 0;
+
+    this._originalStyle = this.options.style;
+    this._layers = {};
+  }
+
+  /**
+   * Layer methods
+   */
+
+  _createClass(FeatureLayer, [{
+    key: 'onRemove',
+    value: function onRemove(map) {
+      L.FeatureGroup.prototype.onRemove.call(this, map);
+      return _get(Object.getPrototypeOf(FeatureLayer.prototype), 'onRemove', this).call(this, map);
+    }
+  }, {
+    key: 'createNewLayer',
+    value: function createNewLayer(geojson) {
+      var layer = L.GeoJSON.geometryToLayer(geojson, this.options);
+      layer.defaultOptions = layer.options;
+      return layer;
+    }
+  }, {
+    key: '_updateLayer',
+    value: function _updateLayer(layer, geojson) {
+      // convert the geojson coordinates into a Leaflet LatLng array/nested arrays
+      // pass it to setLatLngs to update layer geometries
+      var latlngs = [];
+      var coordsToLatLng = this.options.coordsToLatLng || L.GeoJSON.coordsToLatLng;
+
+      // copy new attributes, if present
+      if (geojson.properties) {
+        layer.feature.properties = geojson.properties;
+      }
+
+      switch (geojson.geometry.type) {
+        case 'Point':
+          latlngs = L.GeoJSON.coordsToLatLng(geojson.geometry.coordinates);
+          layer.setLatLng(latlngs);
+          break;
+        case 'LineString':
+          latlngs = L.GeoJSON.coordsToLatLngs(geojson.geometry.coordinates, 0, coordsToLatLng);
+          layer.setLatLngs(latlngs);
+          break;
+        case 'MultiLineString':
+          latlngs = L.GeoJSON.coordsToLatLngs(geojson.geometry.coordinates, 1, coordsToLatLng);
+          layer.setLatLngs(latlngs);
+          break;
+        case 'Polygon':
+          latlngs = L.GeoJSON.coordsToLatLngs(geojson.geometry.coordinates, 1, coordsToLatLng);
+          layer.setLatLngs(latlngs);
+          break;
+        case 'MultiPolygon':
+          latlngs = L.GeoJSON.coordsToLatLngs(geojson.geometry.coordinates, 2, coordsToLatLng);
+          layer.setLatLngs(latlngs);
+          break;
+      }
+    }
+
+    /**
+     * Feature Management Methods
+     */
+
+  }, {
+    key: 'createLayers',
+    value: function createLayers(features) {
+      for (var i = features.length - 1; i >= 0; i--) {
+        var geojson = features[i];
+
+        var layer = this._layers[geojson.id];
+        var newLayer = undefined;
+
+        if (layer && !this._map.hasLayer(layer)) {
+          this._map.addLayer(layer);
+        }
+
+        // update geometry if neccessary
+        if (layer && this.options.simplifyFactor > 0 && (layer.setLatLngs || layer.setLatLng)) {
+          this._updateLayer(layer, geojson);
+        }
+
+        if (!layer) {
+          newLayer = this.createNewLayer(geojson);
+          newLayer.feature = geojson;
+
+          // bubble events from individual layers to the feature layer
+          newLayer.addEventParent(this);
+
+          if (this.options.onEachFeature) {
+            this.options.onEachFeature(newLayer.feature, newLayer);
+          }
+
+          // cache the layer
+          this._layers[newLayer.feature.id] = newLayer;
+
+          // style the layer
+          this.setFeatureStyle(newLayer.feature.id, this.options.style);
+
+          this.fire('createfeature', {
+            feature: newLayer.feature
+          }, true);
+        }
+      }
+    }
+  }, {
+    key: 'addLayers',
+    value: function addLayers(ids) {
+      for (var i = ids.length - 1; i >= 0; i--) {
+        var layer = this._layers[ids[i]];
+        if (layer) {
+          this.fire('addfeature', {
+            feature: layer.feature
+          }, true);
+          this._map.addLayer(layer);
+        }
+      }
+    }
+  }, {
+    key: 'removeLayers',
+    value: function removeLayers(ids, permanent) {
+      for (var i = ids.length - 1; i >= 0; i--) {
+        var id = ids[i];
+        var layer = this._layers[id];
+        if (layer) {
+          this.fire('removefeature', {
+            feature: layer.feature,
+            permanent: permanent
+          }, true);
+          this._map.removeLayer(layer);
+        }
+        if (layer && permanent) {
+          delete this._layers[id];
+        }
+      }
+    }
+  }, {
+    key: 'cellEnter',
+    value: function cellEnter(bounds, coords) {
+      if (!this._zooming && this._map) {
+        L.Util.requestAnimFrame(L.Util.bind(function () {
+          var cacheKey = this._cacheKey(coords);
+          var cellKey = this._cellCoordsToKey(coords);
+          var layers = this._cache[cacheKey];
+          if (this._activeCells[cellKey] && layers) {
+            this.addLayers(layers);
+          }
+        }, this));
+      }
+    }
+  }, {
+    key: 'cellLeave',
+    value: function cellLeave(bounds, coords) {
+      if (!this._zooming) {
+        L.Util.requestAnimFrame(L.Util.bind(function () {
+          if (this._map) {
+            var cacheKey = this._cacheKey(coords);
+            var cellKey = this._cellCoordsToKey(coords);
+            var layers = this._cache[cacheKey];
+            var mapBounds = this._map.getBounds();
+            if (!this._activeCells[cellKey] && layers) {
+              var removable = true;
+
+              for (var i = 0; i < layers.length; i++) {
+                var layer = this._layers[layers[i]];
+                if (layer && layer.getBounds && mapBounds.intersects(layer.getBounds())) {
+                  removable = false;
+                }
+              }
+
+              if (removable) {
+                this.removeLayers(layers, !this.options.cacheLayers);
+              }
+
+              if (!this.options.cacheLayers && removable) {
+                delete this._cache[cacheKey];
+                delete this._cells[cellKey];
+                delete this._activeCells[cellKey];
+              }
+            }
+          }
+        }, this));
+      }
+    }
+
+    /**
+     * Styling Methods
+     */
+
+  }, {
+    key: 'resetStyle',
+    value: function resetStyle() {
+      this.options.style = this._originalStyle;
+      this.eachFeature(function (layer) {
+        this.resetFeatureStyle(layer.feature.id);
+      }, this);
+      return this;
+    }
+  }, {
+    key: 'setStyle',
+    value: function setStyle(style) {
+      this.options.style = style;
+      this.eachFeature(function (layer) {
+        this.setFeatureStyle(layer.feature.id, style);
+      }, this);
+      return this;
+    }
+  }, {
+    key: 'resetFeatureStyle',
+    value: function resetFeatureStyle(id) {
+      var layer = this._layers[id];
+      var style = this._originalStyle || L.Path.prototype.options;
+      if (layer) {
+        L.Util.extend(layer.options, layer.defaultOptions);
+        this.setFeatureStyle(id, style);
+      }
+      return this;
+    }
+  }, {
+    key: 'setFeatureStyle',
+    value: function setFeatureStyle(id, style) {
+      var layer = this._layers[id];
+      if (typeof style === 'function') {
+        style = style(layer.feature);
+      }
+      if (layer.setStyle) {
+        layer.setStyle(style);
+      }
+      return this;
+    }
+
+    /**
+     * Utility Methods
+     */
+
+  }, {
+    key: 'eachFeature',
+    value: function eachFeature(fn, context) {
+      for (var i in this._layers) {
+        fn.call(context, this._layers[i]);
+      }
+      return this;
+    }
+  }, {
+    key: 'getFeature',
+    value: function getFeature(id) {
+      return this._layers[id];
+    }
+  }, {
+    key: 'bringToBack',
+    value: function bringToBack() {
+      this.eachFeature(function (layer) {
+        if (layer.bringToBack) {
+          layer.bringToBack();
+        }
+      });
+    }
+  }, {
+    key: 'bringToFront',
+    value: function bringToFront() {
+      this.eachFeature(function (layer) {
+        if (layer.bringToFront) {
+          layer.bringToFront();
+        }
+      });
+    }
+  }, {
+    key: 'redraw',
+    value: function redraw(id) {
+      if (id) {
+        this._redraw(id);
+      }
+      return this;
+    }
+  }, {
+    key: '_redraw',
+    value: function _redraw(id) {
+      var layer = this._layers[id];
+      var geojson = layer.feature;
+
+      // if this looks like a marker
+      if (layer && layer.setIcon && this.options.pointToLayer) {
+        // update custom symbology, if necessary
+        if (this.options.pointToLayer) {
+          var getIcon = this.options.pointToLayer(geojson, L.latLng(geojson.geometry.coordinates[1], geojson.geometry.coordinates[0]));
+          var updatedIcon = getIcon.options.icon;
+          layer.setIcon(updatedIcon);
+        }
+      }
+
+      // looks like a vector marker (circleMarker)
+      if (layer && layer.setStyle && this.options.pointToLayer) {
+        var getStyle = this.options.pointToLayer(geojson, L.latLng(geojson.geometry.coordinates[1], geojson.geometry.coordinates[0]));
+        var updatedStyle = getStyle.options;
+        this.setFeatureStyle(geojson.id, updatedStyle);
+      }
+
+      // looks like a path (polygon/polyline)
+      if (layer && layer.setStyle && this.options.style) {
+        this.resetStyle(geojson.id);
+      }
+    }
+
+    /**
+     * Feature Managment
+     */
+
+  }, {
+    key: 'createCell',
+    value: function createCell(bounds, coords) {
+      this._requestFeatures(bounds, coords);
+    }
+  }, {
+    key: '_requestFeatures',
+    value: function _requestFeatures(bounds, coords, callback) {
+      this._activeRequests++;
+
+      // our first active request fires loading
+      if (this._activeRequests === 1) {
+        this.fire('loading', {
+          bounds: bounds
+        }, true);
+      }
+
+      return this._buildQuery(bounds).run(function (error, featureCollection, response) {
+        if (response && response.exceededTransferLimit) {
+          this.fire('drawlimitexceeded');
+        }
+
+        // no error, features
+        if (!error && featureCollection && featureCollection.features.length) {
+          // schedule adding features until the next animation frame
+          L.Util.requestAnimFrame(L.Util.bind(function () {
+            this._addFeatures(featureCollection.features, coords);
+            this._postProcessFeatures(bounds);
+          }, this));
+        }
+
+        // no error, no features
+        if (!error && featureCollection && !featureCollection.features.length) {
+          this._postProcessFeatures(bounds);
+        }
+
+        if (callback) {
+          callback.call(this, error, featureCollection);
+        }
+      }, this);
+    }
+  }, {
+    key: '_postProcessFeatures',
+    value: function _postProcessFeatures(bounds) {
+      // deincriment the request counter now that we have processed features
+      this._activeRequests--;
+
+      // if there are no more active requests fire a load event for this view
+      if (this._activeRequests <= 0) {
+        this.fire('load', {
+          bounds: bounds
+        });
+      }
+    }
+  }, {
+    key: '_cacheKey',
+    value: function _cacheKey(coords) {
+      return coords.z + ':' + coords.x + ':' + coords.y;
+    }
+  }, {
+    key: '_addFeatures',
+    value: function _addFeatures(features, coords) {
+      var key = this._cacheKey(coords);
+      this._cache[key] = this._cache[key] || [];
+
+      for (var i = features.length - 1; i >= 0; i--) {
+        var id = features[i].id;
+        this._currentSnapshot.push(id);
+        this._cache[key].push(id);
+      }
+
+      if (this.options.timeField) {
+        this._buildTimeIndexes(features);
+      }
+
+      var zoom = this._map.getZoom();
+
+      if (zoom > this.options.maxZoom || zoom < this.options.minZoom) {
+        return;
+      }
+
+      this.createLayers(features);
+    }
+  }, {
+    key: '_buildQuery',
+    value: function _buildQuery(bounds) {
+      var query = this.service.query().on(this._map).bounds(bounds).where(this.options.where).fields(this.options.fields);
+
+      return query;
+    }
+
+    /**
+     * Where Methods
+     */
+
+  }, {
+    key: 'setWhere',
+    value: function setWhere(where, callback, context) {
+      this.options.where = where && where.length ? where : '1=1';
+
+      var oldSnapshot = [];
+      var newSnapshot = [];
+      var pendingRequests = 0;
+      var requestError = null;
+      var requestCallback = L.Util.bind(function (error, featureCollection) {
+        if (error) {
+          requestError = error;
+        }
+
+        if (featureCollection) {
+          for (var i = featureCollection.features.length - 1; i >= 0; i--) {
+            newSnapshot.push(featureCollection.features[i].id);
+          }
+        }
+
+        pendingRequests--;
+
+        if (pendingRequests <= 0) {
+          this._currentSnapshot = newSnapshot;
+          // schedule adding features until the next animation frame
+          L.Util.requestAnimFrame(L.Util.bind(function () {
+            this.removeLayers(oldSnapshot);
+            this.addLayers(newSnapshot);
+            if (callback) {
+              callback.call(context, requestError);
+            }
+          }, this));
+        }
+      }, this);
+
+      for (var i = this._currentSnapshot.length - 1; i >= 0; i--) {
+        oldSnapshot.push(this._currentSnapshot[i]);
+      }
+
+      for (var key in this._activeCells) {
+        pendingRequests++;
+        var coords = this._keyToCellCoords(key);
+        var bounds = this._cellCoordsToBounds(coords);
+        this._requestFeatures(bounds, key, requestCallback);
+      }
+
+      return this;
+    }
+  }, {
+    key: 'getWhere',
+    value: function getWhere() {
+      return this.options.where;
+    }
+  }, {
+    key: 'refresh',
+    value: function refresh() {
+      for (var key in this._activeCells) {
+        var coords = this._keyToCellCoords(key);
+        var bounds = this._cellCoordsToBounds(coords);
+        this._requestFeatures(bounds, key);
+      }
+
+      if (this.redraw) {
+        this.once('load', function () {
+          this.eachFeature(function (layer) {
+            this._redraw(layer.feature.id);
+          }, this);
+        }, this);
+      }
+    }
+  }, {
+    key: 'metadata',
+    value: function metadata(callback, context) {
+      this.service.metadata(callback, context);
+      return this;
+    }
+  }, {
+    key: 'query',
+    value: function query() {
+      return this.service.query();
+    }
+  }, {
+    key: '_getMetadata',
+    value: function _getMetadata(callback) {
+      if (this._metadata) {
+        var error;
+        callback(error, this._metadata);
+      } else {
+        this.metadata(L.Util.bind(function (error, response) {
+          this._metadata = response;
+          callback(error, this._metadata);
+        }, this));
+      }
+    }
+  }, {
+    key: 'addFeature',
+    value: function addFeature(feature, callback, context) {
+      return this.service.addFeature(feature, L.Util.bind(function (error, response) {
+        if (!error) {
+          // assign ID from result to appropriate objectid field from service metadata
+          feature.properties[metadata.objectIdField] = response.objectId;
+
+          // we also need to update the geojson id for createLayers() to function
+          feature.id = response.objectId;
+          this.createLayers([feature]);
+        }
+
+        if (callback) {
+          callback.call(context, error, response);
+        }
+      }, this));
+    }
+  }, {
+    key: 'updateFeature',
+    value: function updateFeature(feature, callback, context) {
+      this.service.updateFeature(feature, function (error, response) {
+        if (!error) {
+          this.removeLayers([feature.id], true);
+          this.createLayers([feature]);
+        }
+
+        if (callback) {
+          callback.call(context, error, response);
+        }
+      }, this);
+    }
+  }, {
+    key: 'deleteFeature',
+    value: function deleteFeature(id, callback, context) {
+      this.service.deleteFeature(id, function (error, response) {
+        if (!error && response.objectId) {
+          this.removeLayers([response.objectId], true);
+        }
+        if (callback) {
+          callback.call(context, error, response);
+        }
+      }, this);
+    }
+  }, {
+    key: 'deleteFeatures',
+    value: function deleteFeatures(ids, callback, context) {
+      return this.service.deleteFeatures(ids, function (error, response) {
+        if (!error && response.length > 0) {
+          for (var i = 0; i < response.length; i++) {
+            this.removeLayers([response[i].objectId], true);
+          }
+        }
+        if (callback) {
+          callback.call(context, error, response);
+        }
+      }, this);
+    }
+  }]);
+
+  return FeatureLayer;
+})(_VirtualGrid2.VirtualGrid);
+
+exports.FeatureLayer = FeatureLayer;
+
+function featureLayer(url, otpions) {
+  return new FeatureLayer(url, otpions);
+}
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{"../Services/WFS":53,"./VirtualGrid":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],50:[function(require,module,exports){
+(function (global){
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+exports.virtualGrid = virtualGrid;
+var L = global.L || require('leaflet');
+
+// TODO: wait for @patrickarlt to release his module and use that
+//
+
+var VirtualGrid = L.Class.extend({
+
+  includes: L.Mixin.Events,
+
+  options: {
+    cellSize: 512,
+    updateInterval: 150
+  },
+
+  initialize: function initialize(options) {
+    options = L.setOptions(this, options);
+  },
+
+  onAdd: function onAdd(map) {
+    this._map = map;
+    this._update = L.Util.limitExecByInterval(this._update, this.options.updateInterval, this);
+
+    // @TODO remove for leaflet 0.8
+    this._map.addEventListener(this.getEvents(), this);
+
+    this._reset();
+    this._update();
+  },
+
+  onRemove: function onRemove() {
+    this._map.removeEventListener(this.getEvents(), this);
+    this._removeCells();
+  },
+
+  getEvents: function getEvents() {
+    var events = {
+      viewreset: this._reset,
+      moveend: this._update
+    };
+
+    return events;
+  },
+
+  addTo: function addTo(map) {
+    map.addLayer(this);
+    return this;
+  },
+
+  removeFrom: function removeFrom(map) {
+    map.removeLayer(this);
+    return this;
+  },
+
+  _reset: function _reset() {
+    this._removeCells();
+
+    this._cells = {};
+    this._activeCells = {};
+    this._cellsToLoad = 0;
+    this._cellsTotal = 0;
+
+    // @TODO enable at Leaflet 0.8
+    // this._cellNumBounds = this._getCellNumBounds();
+
+    this._resetWrap();
+  },
+
+  _resetWrap: function _resetWrap() {
+    var map = this._map,
+        crs = map.options.crs;
+
+    if (crs.infinite) {
+      return;
+    }
+
+    var cellSize = this._getCellSize();
+
+    if (crs.wrapLng) {
+      this._wrapLng = [Math.floor(map.project([0, crs.wrapLng[0]]).x / cellSize), Math.ceil(map.project([0, crs.wrapLng[1]]).x / cellSize)];
+    }
+
+    if (crs.wrapLat) {
+      this._wrapLat = [Math.floor(map.project([crs.wrapLat[0], 0]).y / cellSize), Math.ceil(map.project([crs.wrapLat[1], 0]).y / cellSize)];
+    }
+  },
+
+  _getCellSize: function _getCellSize() {
+    return this.options.cellSize;
+  },
+
+  _update: function _update() {
+
+    if (!this._map) {
+      return;
+    }
+
+    var bounds = this._map.getPixelBounds(),
+        zoom = this._map.getZoom(),
+        cellSize = this._getCellSize();
+
+    if (zoom > this.options.maxZoom || zoom < this.options.minZoom) {
+      return;
+    }
+
+    // cell coordinates range for the current view
+    var cellBounds = L.bounds(bounds.min.divideBy(cellSize).floor(), bounds.max.divideBy(cellSize).floor());
+
+    this._addCells(cellBounds);
+    this._removeOtherCells(cellBounds);
+  },
+
+  _addCells: function _addCells(bounds) {
+
+    var queue = [],
+        center = bounds.getCenter(),
+        zoom = this._map.getZoom();
+
+    var j, i, coords;
+    // create a queue of coordinates to load cells from
+    for (j = bounds.min.y; j <= bounds.max.y; j++) {
+      for (i = bounds.min.x; i <= bounds.max.x; i++) {
+        coords = new L.Point(i, j);
+        coords.z = zoom;
+
+        // @TODO enable at Leaflet 0.8
+        // if (this._isValidCell(coords)) {
+        //   queue.push(coords);
+        // }
+
+        queue.push(coords);
+      }
+    }
+
+    var cellsToLoad = queue.length;
+
+    if (cellsToLoad === 0) {
+      return;
+    }
+
+    this._cellsToLoad += cellsToLoad;
+    this._cellsTotal += cellsToLoad;
+
+    // sort cell queue to load cells in order of their distance to center
+    queue.sort(function (a, b) {
+      return a.distanceTo(center) - b.distanceTo(center);
+    });
+
+    for (i = 0; i < cellsToLoad; i++) {
+      this._addCell(queue[i]);
+    }
+  },
+
+  // @TODO enable at Leaflet 0.8
+  // _isValidCell: function (coords) {
+  //   var crs = this._map.options.crs;
+
+  //   if (!crs.infinite) {
+  //     // don't load cell if it's out of bounds and not wrapped
+  //     var bounds = this._cellNumBounds;
+  //     if (
+  //       (!crs.wrapLng && (coords.x < bounds.min.x || coords.x > bounds.max.x)) ||
+  //       (!crs.wrapLat && (coords.y < bounds.min.y || coords.y > bounds.max.y))
+  //     ) {
+  //       return false;
+  //     }
+  //   }
+
+  //   if (!this.options.bounds) {
+  //     return true;
+  //   }
+
+  //   // don't load cell if it doesn't intersect the bounds in options
+  //   var cellBounds = this._cellCoordsToBounds(coords);
+  //   return L.latLngBounds(this.options.bounds).intersects(cellBounds);
+  // },
+
+  // converts cell coordinates to its geographical bounds
+  _cellCoordsToBounds: function _cellCoordsToBounds(coords) {
+    var map = this._map,
+        cellSize = this.options.cellSize,
+        nwPoint = coords.multiplyBy(cellSize),
+        sePoint = nwPoint.add([cellSize, cellSize]),
+
+    // @TODO for Leaflet 0.8
+    // nw = map.wrapLatLng(map.unproject(nwPoint, coords.z)),
+    // se = map.wrapLatLng(map.unproject(sePoint, coords.z));
+
+    nw = map.unproject(nwPoint, coords.z).wrap(),
+        se = map.unproject(sePoint, coords.z).wrap();
+
+    return new L.LatLngBounds(nw, se);
+  },
+
+  // converts cell coordinates to key for the cell cache
+  _cellCoordsToKey: function _cellCoordsToKey(coords) {
+    return coords.x + ':' + coords.y;
+  },
+
+  // converts cell cache key to coordiantes
+  _keyToCellCoords: function _keyToCellCoords(key) {
+    var kArr = key.split(':'),
+        x = parseInt(kArr[0], 10),
+        y = parseInt(kArr[1], 10);
+
+    return new L.Point(x, y);
+  },
+
+  // remove any present cells that are off the specified bounds
+  _removeOtherCells: function _removeOtherCells(bounds) {
+    for (var key in this._cells) {
+      if (!bounds.contains(this._keyToCellCoords(key))) {
+        this._removeCell(key);
+      }
+    }
+  },
+
+  _removeCell: function _removeCell(key) {
+    var cell = this._activeCells[key];
+    if (cell) {
+      delete this._activeCells[key];
+
+      if (this.cellLeave) {
+        this.cellLeave(cell.bounds, cell.coords);
+      }
+
+      this.fire('cellleave', {
+        bounds: cell.bounds,
+        coords: cell.coords
+      });
+    }
+  },
+
+  _removeCells: function _removeCells() {
+    for (var key in this._cells) {
+      var bounds = this._cells[key].bounds;
+      var coords = this._cells[key].coords;
+
+      if (this.cellLeave) {
+        this.cellLeave(bounds, coords);
+      }
+
+      this.fire('cellleave', {
+        bounds: bounds,
+        coords: coords
+      });
+    }
+  },
+
+  _addCell: function _addCell(coords) {
+    // wrap cell coords if necessary (depending on CRS)
+    this._wrapCoords(coords);
+
+    // generate the cell key
+    var key = this._cellCoordsToKey(coords);
+
+    // get the cell from the cache
+    var cell = this._cells[key];
+    // if this cell should be shown as isnt active yet (enter)
+
+    if (cell && !this._activeCells[key]) {
+      if (this.cellEnter) {
+        this.cellEnter(cell.bounds, coords);
+      }
+
+      this.fire('cellenter', {
+        bounds: cell.bounds,
+        coords: coords
+      });
+
+      this._activeCells[key] = cell;
+    }
+
+    // if we dont have this cell in the cache yet (create)
+    if (!cell) {
+      cell = {
+        coords: coords,
+        bounds: this._cellCoordsToBounds(coords)
+      };
+
+      this._cells[key] = cell;
+      this._activeCells[key] = cell;
+
+      if (this.createCell) {
+        this.createCell(cell.bounds, coords);
+      }
+
+      this.fire('cellcreate', {
+        bounds: cell.bounds,
+        coords: coords
+      });
+    }
+  },
+
+  _wrapCoords: function _wrapCoords(coords) {
+    coords.x = this._wrapLng ? L.Util.wrapNum(coords.x, this._wrapLng) : coords.x;
+    coords.y = this._wrapLat ? L.Util.wrapNum(coords.y, this._wrapLat) : coords.y;
+  }
+
+  // get the global cell coordinates range for the current zoom
+  // @TODO enable at Leaflet 0.8
+  // _getCellNumBounds: function () {
+  //   // @TODO for Leaflet 0.8
+  //   // var bounds = this._map.getPixelWorldBounds(),
+  //   //     size = this._getCellSize();
+  //   //
+  //   // return bounds ? L.bounds(
+  //   //     bounds.min.divideBy(size).floor(),
+  //   //     bounds.max.divideBy(size).ceil().subtract([1, 1])) : null;
+  // }
+
+});
+
+exports.VirtualGrid = VirtualGrid;
+L.VirtualGrid = VirtualGrid;
+
+function virtualGrid(options) {
+  return new L.VirtualGrid(options);
+}
+
+;
+
+L.virtualGrid = virtualGrid;
+
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+
+},{"leaflet":"leaflet"}],51:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1936,6 +2877,7 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 });
 exports.serialize = serialize;
+exports.applyProxy = applyProxy;
 exports.request = request;
 exports.jsonp = jsonp;
 
@@ -1984,6 +2926,18 @@ function serialize(params) {
   }
 
   return data;
+}
+
+/**
+ * @param  {String} proxy
+ * @param  {String} url
+ * @return {String}
+ */
+
+function applyProxy(proxy, url) {
+  if (proxy) {
+    return proxy + (/\=$/.test(proxy) ? '' : '?') + encodeURIComponent(url);
+  } else return url;
 }
 
 /**
@@ -2094,6 +3048,8 @@ function request(url, params, callback, context) {
   var paramString = serialize(params);
   var requestLength = (url + '?' + paramString).length;
 
+  console.log(url + '?' + paramString);
+
   // request is less then 2000 characters and the browser supports CORS,
   // make GET request with XMLHttpRequest
   if (requestLength <= 2000 && _Support2['default'].cors) {
@@ -2199,7 +3155,7 @@ exports.post = xmlHttpPost;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./Support":53,"./Util":60,"babel-runtime/helpers/interop-require-default":13,"leaflet":"leaflet"}],50:[function(require,module,exports){
+},{"./Support":55,"./Util":62,"babel-runtime/helpers/interop-require-default":13,"leaflet":"leaflet"}],52:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -2224,9 +3180,18 @@ var _Util = require('../Util');
 
 var _Request = require('../Request');
 
+/**
+ * @class ogc.Services.Service
+ * @extends {Events}
+ */
 var L = global.L || require('leaflet');
 
 var Service = (function () {
+
+  /**
+   * @param  {Object} options
+   */
+
   function Service() {
     var options = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
 
@@ -2291,7 +3256,7 @@ var Service = (function () {
         this._requestQueue.push([method, path, params, callback, context]);
         return;
       } else {
-        var url = this.options.proxy ? this.options.proxy + '?' + this.options.url + path : this.options.url + path;
+        var url = (0, _Request.applyProxy)(this.options.proxy, this.options.url + path);
 
         if ((method === 'get' || method === 'request') && !this.options.useCors) {
           return _Request.Request.get.JSONP(url, params, wrappedCallback);
@@ -2375,7 +3340,7 @@ exports['default'] = service;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Request":49,"../Support":53,"../Util":60,"babel-runtime/core-js/object/define-property":3,"babel-runtime/core-js/object/get-own-property-descriptor":4,"babel-runtime/core-js/object/get-own-property-names":5,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"leaflet":"leaflet"}],51:[function(require,module,exports){
+},{"../Request":51,"../Support":55,"../Util":62,"babel-runtime/core-js/object/define-property":3,"babel-runtime/core-js/object/get-own-property-descriptor":4,"babel-runtime/core-js/object/get-own-property-names":5,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"leaflet":"leaflet"}],53:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -2428,6 +3393,11 @@ var WFSService = (function (_Service) {
     value: function getFeature() {
       return (0, _TasksGetFeature.getFeature)(this);
     }
+  }, {
+    key: 'query',
+    value: function query() {
+      return this.getFeature();
+    }
 
     /**
      * @return {ogc.Tasks.DescribeFeatureType}
@@ -2436,6 +3406,31 @@ var WFSService = (function (_Service) {
     key: 'describeFeatureType',
     value: function describeFeatureType() {
       return (0, _TasksDescribeFeatureType.describeFeatureType)(this);
+    }
+
+    /**
+     * @return {ogc.Tasks.GetCapabilities}
+     */
+  }, {
+    key: 'getCapabilities',
+    value: function getCapabilities() {
+      return (0, _TasksGetCapabilities.getCapabilities)(this).service('WFS').version('2.0.0');
+    }
+
+    /**
+     * @param  {Function=} callback
+     * @param  {*=}        context
+     * @return {ogc.Tasks.GetCapabilities}
+     */
+  }, {
+    key: 'metadata',
+    value: function metadata(callback, context) {
+      var task = this.getCapabilities(this);
+      if (arguments.length !== 0) {
+        return task.run(callback, context);
+      } else {
+        return task;
+      }
     }
   }]);
 
@@ -2450,7 +3445,7 @@ function wfsService(options) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Tasks/DescribeFeatureType":54,"../Tasks/GetCapabilities":55,"../Tasks/GetFeature":56,"./Service":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],52:[function(require,module,exports){
+},{"../Tasks/DescribeFeatureType":56,"../Tasks/GetCapabilities":57,"../Tasks/GetFeature":58,"./Service":52,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],54:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -2559,7 +3554,7 @@ function wmsService(options) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Tasks/GetCapabilities":55,"../Tasks/GetFeatureInfo":57,"../Tasks/GetLegendGraphic":58,"./Service":50,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],53:[function(require,module,exports){
+},{"../Tasks/GetCapabilities":57,"../Tasks/GetFeatureInfo":59,"../Tasks/GetLegendGraphic":60,"./Service":52,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],55:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -2580,7 +3575,7 @@ var Support = {
 exports.Support = Support;
 exports['default'] = Support;
 
-},{}],54:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -2651,7 +3646,7 @@ function describeFeatureType(endpoint) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./Task":59,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],55:[function(require,module,exports){
+},{"./Task":61,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],57:[function(require,module,exports){
 'use strict';
 
 var _get = require('babel-runtime/helpers/get')['default'];
@@ -2751,7 +3746,7 @@ function getCapabilities(endpoint) {
   return new GetCapabilities(endpoint);
 }
 
-},{"./Task":59,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"wms-capabilities":38}],56:[function(require,module,exports){
+},{"./Task":61,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"wms-capabilities":38}],58:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -2793,9 +3788,9 @@ var GetFeature = (function (_Task) {
      * @type {Object}
      */
     L.Util.extend(this.params, {
-      srsName: 'EPSG:4326',
+      srs: 'EPSG:4326',
       request: 'GetFeature',
-      info_format: 'application/json'
+      outputFormat: 'application/json'
     });
 
     if (this._service && this._service.options) {
@@ -2865,7 +3860,7 @@ var GetFeature = (function (_Task) {
       if (L.Util.isArray(_layers)) {
         _layers = _layers.join(',');
       }
-      this.params.typeNames = _layers;
+      this.params.typeName = _layers;
       return this;
     }
 
@@ -2892,7 +3887,9 @@ var GetFeature = (function (_Task) {
      */
   }, {
     key: 'property',
-    value: function property(_property) {
+    value: function property() {
+      var _property = arguments.length <= 0 || arguments[0] === undefined ? '' : arguments[0];
+
       if (L.Util.isArray(_property)) {
         _property = _property.join(',');
       }
@@ -2917,7 +3914,8 @@ var GetFeature = (function (_Task) {
   }, {
     key: 'bounds',
     value: function bounds(_bounds) {
-      return this.bbox((0, _Util.boundsToBBox)(_bounds));
+      this.params.cql_filter = this._getBBoxFilter(_bounds);
+      return this;
     }
 
     /**
@@ -2929,6 +3927,63 @@ var GetFeature = (function (_Task) {
     value: function bbox(_bbox) {
       this.params.bbox = _bbox.join(',');
       return this;
+    }
+
+    /**
+     * @param  {L.LatLngBounds} bounds
+     * @param  {L.CRS}          crs
+     * @return {Array.<Number>}
+     */
+  }, {
+    key: '_boundsToBBox',
+    value: function _boundsToBBox(bounds, crs) {
+      var nw = crs.project(bounds.getNorthWest());
+      var se = crs.project(bounds.getSouthEast());
+
+      if (parseFloat(this.params.version) >= 1.3 && crs === L.CRS.EPSG4326) {
+        return [se.y, nw.x, nw.y, se.x];
+      } else {
+        return [nw.x, se.y, se.x, nw.y];
+      }
+    }
+
+    /**
+    * BBox CQL filter
+    * @param  {L.LatLngBounds} bounds
+    * @return {String}
+    */
+  }, {
+    key: '_getBBoxFilter',
+    value: function _getBBoxFilter(bounds) {
+      var bbox = this._boundsToBBox(bounds, this._map.options.crs);
+      return 'BBOX(the_geom,' + bbox + ',\'' + this.params.srs + '\')';
+    }
+
+    /**
+     * @param  {L.Map} map
+     * @return {GetFeatureInfo}
+     */
+  }, {
+    key: 'on',
+    value: function on(map) {
+      _get(Object.getPrototypeOf(GetFeature.prototype), 'on', this).call(this, map);
+      this.srs(map.options.crs.code);
+      return this;
+    }
+  }, {
+    key: 'where',
+    value: function where(_where) {
+      return this.filter(_where);
+    }
+  }, {
+    key: 'filter',
+    value: function filter() {
+      return this;
+    }
+  }, {
+    key: 'run',
+    value: function run(callback, context) {
+      return this.request(callback, context);
     }
   }]);
 
@@ -2943,7 +3998,7 @@ function getFeature(endpoint) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Util":60,"./Task":59,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],57:[function(require,module,exports){
+},{"../Util":62,"./Task":61,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],59:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -3196,7 +4251,7 @@ function getFeatureInfo(endpoint) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Support":53,"../Util":60,"./Task":59,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],58:[function(require,module,exports){
+},{"../Support":55,"../Util":62,"./Task":61,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],60:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -3415,15 +4470,13 @@ function getLegendGraphic(endpoint) {
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Request":49,"../Support":53,"./Task":59,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],59:[function(require,module,exports){
+},{"../Request":51,"../Support":55,"./Task":61,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/get":10,"babel-runtime/helpers/inherits":11,"leaflet":"leaflet"}],61:[function(require,module,exports){
 (function (global){
 'use strict';
 
 var _createClass = require('babel-runtime/helpers/create-class')['default'];
 
 var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
-
-var _interopRequireDefault = require('babel-runtime/helpers/interop-require-default')['default'];
 
 Object.defineProperty(exports, '__esModule', {
   value: true
@@ -3435,8 +4488,6 @@ var _Support = require('../Support');
 var _Util = require('../Util');
 
 var _Request = require('../Request');
-
-var _Request2 = _interopRequireDefault(_Request);
 
 /**
  * @class ogc.Tasks.Task
@@ -3524,13 +4575,14 @@ var Task = (function () {
   }, {
     key: '_request',
     value: function _request(method, path, params, callback, context) {
-      var url = this.options.proxy ? this.options.proxy + '?' + this.options.url + path : this.options.url + path;
+      var proxy = this.options.proxy;
+      var url = (0, _Request.applyProxy)(this.options.proxy, this.options.url + path);
 
       if ((method === 'get' || method === 'request') && !this.options.useCors) {
-        return _Request2['default'].get.JSONP(url, params, callback, context);
+        return _Request.Request.get.JSONP(url, params, callback, context);
       }
 
-      return _Request2['default'][method](url, params, callback, context);
+      return _Request.Request[method](url, params, callback, context);
     }
   }]);
 
@@ -3547,7 +4599,7 @@ exports['default'] = task;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"../Request":49,"../Support":53,"../Util":60,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"babel-runtime/helpers/interop-require-default":13,"leaflet":"leaflet"}],60:[function(require,module,exports){
+},{"../Request":51,"../Support":55,"../Util":62,"babel-runtime/helpers/class-call-check":7,"babel-runtime/helpers/create-class":8,"leaflet":"leaflet"}],62:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -3683,7 +4735,7 @@ exports['default'] = Util;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"leaflet":"leaflet"}],61:[function(require,module,exports){
+},{"leaflet":"leaflet"}],63:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -3731,7 +4783,9 @@ var _ServicesWMS = require('./Services/WMS');
 
 // import layers
 
-var _LayersWMS = require('./Layers/WMS');
+var _LayersDynamicMapLayer = require('./Layers/DynamicMapLayer');
+
+var _LayersFeatureLayer = require('./Layers/FeatureLayer');
 
 //import { FeatureGrid } from './Layers/FeatureLayer/FeatureGrid';
 //import { FeatureManager } from './Layers/FeatureLayer/FeatureManager';
@@ -3752,18 +4806,21 @@ L.ogc = {
   get: _Request.get, post: _Request.post, request: _Request.request,
   Support: _Support.Support,
 
+  // Tasks
   GetCapabilities: _TasksGetCapabilities.GetCapabilities, getCapabilities: _TasksGetCapabilities.getCapabilities,
   GetLegendGraphic: _TasksGetLegendGraphic.GetLegendGraphic, getLegendGraphic: _TasksGetLegendGraphic.getLegendGraphic,
   GetFeatureInfo: _TasksGetFeatureInfo.GetFeatureInfo, getFeatureInfo: _TasksGetFeatureInfo.getFeatureInfo,
   GetFeature: _TasksGetFeature.GetFeature, getFeature: _TasksGetFeature.getFeature,
   DescribeFeatureType: _TasksDescribeFeatureType.DescribeFeatureType, describeFeatureType: _TasksDescribeFeatureType.describeFeatureType,
 
+  // Controls
   Legend: _ControlsLegend.Legend, legend: _ControlsLegend.legend,
 
-  WMS: _LayersWMS.WMS, wms: _LayersWMS.wms,
+  // Layers
+  DynamicMapLayer: _LayersDynamicMapLayer.DynamicMapLayer, dynamicMapLayer: _LayersDynamicMapLayer.dynamicMapLayer,
+  FeatureLayer: _LayersFeatureLayer.FeatureLayer, featureLayer: _LayersFeatureLayer.featureLayer,
 
   // aliases
-  DynamicMapLayer: _LayersWMS.WMS,
 
   Controls: {
     Legend: _ControlsLegend.Legend
@@ -3782,10 +4839,12 @@ L.ogc = {
   },
 
   Layers: {
-    WMS: _LayersWMS.WMS
+    DynamicMapLayer: _LayersDynamicMapLayer.DynamicMapLayer,
+    FeatureLayer: _LayersFeatureLayer.FeatureLayer
   },
   layers: {
-    wms: _LayersWMS.wms
+    dynamicMapLayer: _LayersDynamicMapLayer.dynamicMapLayer,
+    featureLayer: _LayersFeatureLayer.featureLayer
   }
 };
 
@@ -3794,7 +4853,7 @@ module.exports = exports['default'];
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 
-},{"./Controls/Legend":47,"./Layers/WMS":48,"./Request":49,"./Services/Service":50,"./Services/WFS":51,"./Services/WMS":52,"./Support":53,"./Tasks/DescribeFeatureType":54,"./Tasks/GetCapabilities":55,"./Tasks/GetFeature":56,"./Tasks/GetFeatureInfo":57,"./Tasks/GetLegendGraphic":58,"./Tasks/Task":59,"./Util":60,"leaflet":"leaflet"}]},{},[1])(1)
+},{"./Controls/Legend":47,"./Layers/DynamicMapLayer":48,"./Layers/FeatureLayer":49,"./Request":51,"./Services/Service":52,"./Services/WFS":53,"./Services/WMS":54,"./Support":55,"./Tasks/DescribeFeatureType":56,"./Tasks/GetCapabilities":57,"./Tasks/GetFeature":58,"./Tasks/GetFeatureInfo":59,"./Tasks/GetLegendGraphic":60,"./Tasks/Task":61,"./Util":62,"leaflet":"leaflet"}]},{},[1])(1)
 });
 
 
